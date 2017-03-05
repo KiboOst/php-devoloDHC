@@ -1,6 +1,6 @@
 <?php
 
-require($_SERVER['DOCUMENT_ROOT']."/_devolo/functions/config.php");
+require("config.php");
 
 session_start();
 session_name("DHC");
@@ -541,7 +541,6 @@ $localPasskey = "'.$_SESSION['DHCpasskey'].'";
 
 function DHC_getSessionID() //get and set cookie for later authorized requests
 {
-	DHC_initAuth();
 	$_SESSION['DHCsessionID'] = null;
 
 	//get token:
