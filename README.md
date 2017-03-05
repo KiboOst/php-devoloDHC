@@ -44,7 +44,7 @@ Check state of a device:
 ```
 $mydevice =  DHC_getDeviceByName("MyWallPlug");
 $isOn = DHC_isDeviceOn($mydevice);
-DHC_isDeviceOn($device)
+echo "isOn ".$mydevice['name'].": ".$isOn."<br>";
 ```
 
 Turn a device on:
@@ -59,6 +59,9 @@ $myrule = DHC_getRuleByName("MyDevoloRule");
 $isEnabled = DHC_isRuleOn($myrule);
 echo "isEnabled ".$myrule['name'].": ".$isEnabled."<br>";
 ```
+##TODO
+- Trying to change state of schedules and rules (would allow holliday mode for example).
+- Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
 
 ##Credits
 
