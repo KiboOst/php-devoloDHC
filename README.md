@@ -62,7 +62,7 @@ echo "isEnabled ".$myrule['name'].": ".$isEnabled."<br>";
 
 ##Credits
 
-Done with invaluable help of source code from https://github.com/kdietrich!
+Done with invaluable help of source code from https://github.com/kdietrich/node-devolo!
 
 
 ##Changes
