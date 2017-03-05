@@ -15,7 +15,7 @@ Feel free to submit an issue or pull request to add more.
 ##Requirements
 - PHP5+
 - Curl
-Can be installed on you lan, but at least first time the api will need external access to gather authortization stuff from www.devolo.com.
+Can be installed on you lan, but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
 Can be installed on your external domain, but the api need access to your Devolo Home Control box. Can be done throw NAT/PAT with a dyndns. Specify the url as $DHCcentralHost instead of IP.
 
 
@@ -24,7 +24,7 @@ Can be installed on your external domain, but the api need access to your Devolo
 1. Put config.php and phpDevoloAPI.php in a folder.
 2. Give the folder write permission.
 3. Set login, password and DHCcentralHost in config.php. These are your devolo web login/password and local Devolo central IP (lan) or url (wan) to access it.
-The api will first request some authorization data from www.devolo.com then write them back into config.php as they won't change till you don't change your login/password.
+The api will first request some authorization data from www.mydevolo.com then write them back into config.php as they won't change till you don't change your login/password.
 
 
 - Include phpDevoloAPI.php in your script
