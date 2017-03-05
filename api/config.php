@@ -1,0 +1,7 @@
+<?php
+$login = "";
+$password = "";
+$DHCcentralHost = "";
+
+
+?>
