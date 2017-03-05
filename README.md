@@ -15,7 +15,8 @@ Feel free to submit an issue or pull request to add more.
 ##Requirements
 - PHP5+
 - Curl
-Can be installed on you lan, but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
+
+Can be installed on your lan, but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
 Can be installed on your external domain, but the api need access to your Devolo Home Control box. Can be done throw NAT/PAT with a dyndns. Specify the url as $DHCcentralHost instead of IP.
 
 
