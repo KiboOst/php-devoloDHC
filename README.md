@@ -64,7 +64,7 @@ $isEnabled = DHC_isRuleOn($myrule);
 echo "isEnabled ".$myrule['name'].": ".$isEnabled."<br>";
 ```
 ##TODO
-- Trying to change state of schedules and rules (would allow holliday mode for example).
+
 - Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
 
 ##Credits
