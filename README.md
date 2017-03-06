@@ -9,6 +9,8 @@ The following devices are currently supported:
 - Smart Metering Plug
 - Motion Sensor
 - Door Sensor / Window Contact
+- http devices
+- Scenes
 
 Feel free to submit an issue or pull request to add more.
 
@@ -27,6 +29,7 @@ Can be installed on your external domain, but the api need access to your Devolo
 3. Set login, password and DHCcentralHost in config.php. These are your devolo web login/password and local Devolo central IP (lan) or url (wan) to access it.
 The api will first request some authorization data from www.mydevolo.com then write them back into config.php as they won't change till you don't change your login/password.
 
+DHC_init() will gather autorization datas and can take a few seconds. Run it only once in your script!
 
 - Include phpDevoloAPI.php in your script
 - Start it with DHC_init();
@@ -70,6 +73,20 @@ Done with invaluable help of source code from https://github.com/kdietrich/node-
 
 
 ##Changes
+
+####v2017.2.0 (2017-03-06)
+- Support http device
+- Support Scenes
+```
+Run http device:
+$myhttpDevice =  DHC_getDeviceByName("RequestStuff");
+$result = DHC_turnDeviceOnOff($myhttpDevice, 1);
+
+Run scene:
+$myScene = DHC_getSceneByName("PlayStuff");
+$result = DHC_startScene($myScene);
+```
+Anyway, you should know your http device url, and scenes can be triggered with scene sharing url. So these are not really usefull.
 
 ####v2017.1.0 (2017-03-04)
 - First public version.
