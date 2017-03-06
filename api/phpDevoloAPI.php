@@ -1,10 +1,14 @@
 <?php
+/*
 
+https://github.com/KiboOst/php-devoloDHC
+
+*/
 require("config.php");
 
 session_start();
 session_name("DHC");
-$_SESSION['DHCversion'] = "2017.1.0";
+$_SESSION['DHCversion'] = "2017.2.0";
 $_SESSION['DHCdebug'] = 0;
 
 $_SESSION['DHCcentralHost'] = $DHCcentralHost;
@@ -21,15 +25,14 @@ $_SESSION['DHCdevices'] = array();
 
 $_SESSION['DHCrules'] = array();
 $_SESSION['DHCtimers'] = array();
+$_SESSION['DHCscenes'] = array();
 
-$_SESSION['DHCDevicesOnOff'] = ["BinarySwitch", "BinarySensor", "SirenBinarySensor"]; //supported available devices for on/off:
+$_SESSION['DHCDevicesOnOff'] = ["BinarySwitch", "BinarySensor", "SirenBinarySensor"]; //supported devices type for on/off
+$_SESSION['DHCDevicesSend'] = ["HttpRequest"]; //supported devices type for send
 
 //user functions======================================================
-
 function DHC_turnDeviceOnOff($device, $state=0)
 {
-	$operation = ($state == 0 ? 'turnOff' : 'turnOn');
-
 	$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
 	if ($sensors == null) return false;
 
@@ -42,11 +45,18 @@ function DHC_turnDeviceOnOff($device, $state=0)
 
 		if (in_array($sensorType, $_SESSION['DHCDevicesOnOff']))
 		{
+			$operation = ($state == 0 ? 'turnOff' : 'turnOn');
+			$result = DHC_invokeOperation($sensor, $operation);
+			return $result;
+		}
+		if (in_array($sensorType, $_SESSION['DHCDevicesSend']) and ($state == 1))
+		{
+			$operation = "send";
 			$result = DHC_invokeOperation($sensor, $operation);
 			return $result;
 		}
 	}
-	return null;
+	return false;
 }
 
 function DHC_isDeviceOn($device) //return true of false if find a sensor state in device
@@ -73,7 +83,7 @@ function DHC_isDeviceOn($device) //return true of false if find a sensor state i
 			}
 		}
 	}
-	return null;
+	return false;
 }
 
 function DHC_getDeviceByName($name) //return device array (name, uids, elements)
@@ -105,6 +115,49 @@ function DHC_isRuleOn($rule)
 function DHC_isTimerOn($timer)
 {
 	return DHC_isRuleOn($timer);
+}
+
+function DHC_startScene($scene)
+{
+	$element = $scene['element'];
+	$result = DHC_invokeOperation($element, "start");
+	return $result;
+}
+
+function DHC_getRuleByName($name)
+{
+	if (count($_SESSION['DHCrules']) == 0) DHC_getRules();
+
+	for($i=0; $i<count($_SESSION['DHCrules']); $i++)
+	{
+		$thisRule = $_SESSION['DHCrules'][$i];
+		if ($thisRule['name'] == $name) return $thisRule;
+	}
+	return false;
+}
+
+function DHC_getTimerByName($name)
+{
+	if (count($_SESSION['DHCtimers']) == 0) DHC_getTimers();
+
+	for($i=0; $i<count($_SESSION['DHCtimers']); $i++)
+	{
+		$thisTimer = $_SESSION['DHCtimers'][$i];
+		if ($thisTimer['name'] == $name) return $thisTimer;
+	}
+	return false;
+}
+
+function DHC_getSceneByName($name)
+{
+	if (count($_SESSION['DHCscenes']) == 0) DHC_getScenes();
+
+	for($i=0; $i<count($_SESSION['DHCscenes']); $i++)
+	{
+		$thisScene = $_SESSION['DHCscenes'][$i];
+		if ($thisScene['name'] == $name) return $thisScene;
+	}
+	return false;
 }
 
 function DHC_getStates($device) //return array of sensor type and state
@@ -140,29 +193,8 @@ function DHC_getStates($device) //return array of sensor type and state
 	return $arrayStates;
 }
 
-function DHC_getRuleByName($name)
-{
-	if (count($_SESSION['DHCrules']) == 0) DHC_getRules();
 
-	for($i=0; $i<count($_SESSION['DHCrules']); $i++)
-	{
-		$thisRule = $_SESSION['DHCrules'][$i];
-		if ($thisRule['name'] == $name) return $thisRule;
-	}
-	return false;
-}
 
-function DHC_getTimerByName($name)
-{
-	if (count($_SESSION['DHCtimers']) == 0) DHC_getTimers();
-
-	for($i=0; $i<count($_SESSION['DHCtimers']); $i++)
-	{
-		$thisTimer = $_SESSION['DHCtimers'][$i];
-		if ($thisTimer['name'] == $name) return $thisTimer;
-	}
-	return false;
-}
 
 
 //standard functions==================================================
@@ -192,6 +224,42 @@ function DHCi_getStatebyType($sensorType) //ex: devolo.BinarySensor:hdm:ZWave:D8
 }
 
 //root functions======================================================
+function DHC_getScenes() //ok
+{
+	$json = '{
+		"jsonrpc":"2.0",
+		"method":"FIM/getFunctionalItems",
+		"params":[
+			["devolo.Scene"],0
+			]
+		}';
+	$json = json_decode($json);
+	$data = DHCrequest('http', 'POST', $_SESSION['DHCcentralHost'], '/remote/json-rpc', $json, null, null, $_SESSION['DHCsessionID']);
+	$jsonArray = json_decode($data, true);
+
+	$scenesArray = array();
+	$scenesNum = count($jsonArray['result']["items"][0]['properties']['sceneUIDs']);
+	for($i=0; $i<$scenesNum; $i++)
+	{
+		$thisScene = $jsonArray['result']["items"][0]['properties']['sceneUIDs'][$i];
+		array_push($scenesArray, $thisScene);
+	}
+
+	//request datas for all rules:
+	$jsonArray = DHC_fetchItems($scenesArray);
+
+	$scenesNum = count($jsonArray['result']["items"]);
+	for($i=0; $i<$scenesNum; $i++)
+	{
+		$thisScene = $jsonArray['result']["items"][$i];
+		$rule = array("name" => $thisScene["properties"]["itemName"],
+						"id" => $thisScene["UID"],
+						"element" => str_replace("Scene", "SceneControl", $thisScene["UID"])
+						);
+		array_push($_SESSION['DHCscenes'], $rule);
+	}
+}
+
 function DHC_getTimers() //ok
 {
 	$json = '{
