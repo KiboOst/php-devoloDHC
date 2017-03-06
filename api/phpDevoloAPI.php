@@ -27,8 +27,8 @@ $_SESSION['DHCrules'] = array();
 $_SESSION['DHCtimers'] = array();
 $_SESSION['DHCscenes'] = array();
 
-$_SESSION['DHCDevicesOnOff'] = ["BinarySwitch", "BinarySensor", "SirenBinarySensor"]; //supported devices type for on/off
-$_SESSION['DHCDevicesSend'] = ["HttpRequest"]; //supported devices type for send
+$_SESSION['DHCDevicesOnOff'] = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off
+$_SESSION['DHCDevicesSend'] = array("HttpRequest"); //supported devices type for send
 
 //user functions======================================================
 function DHC_turnDeviceOnOff($device, $state=0)
