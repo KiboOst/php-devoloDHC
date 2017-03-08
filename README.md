@@ -18,19 +18,21 @@ Feel free to submit an issue or pull request to add more.
 
 ##Requirements
 - PHP5+
-- Curl
+- cURL
 
 Can be installed on your lan, but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
-Can be installed on your external domain, but the api need access to your Devolo Home Control box. Can be done throw NAT/PAT with a dyndns. Specify the url as $DHCcentralHost instead of IP.
+Can be installed on your external domain, but the api need access to your Devolo Home Control box. Can be done throw NAT/PAT with a dyndns. In this case, specify the url as $localIP.
 
 
 ##How-to
 
-Include phpDevoloAPI.php in your script and start it!
+Include phpDevoloAPI.php in your script.
 
 First time execution:
-The api will first request some authorization data from www.mydevolo.com. These data won't change for same user, so you can get them and directly pass them next time to get faster connection.
+The api will first request some authorization data from www.mydevolo.com.
+These data won't change for same user, so you can get them and directly pass them next time to get faster connection.
 Note them in your script or in a config file you include before creating DevoloDHC().
+
 ```
 <?php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
@@ -41,6 +43,7 @@ echo "<pre>".json_encode($auth, JSON_PRETTY_PRINT)."</pre><br>";
 ```
 
 So note return values and next time, call $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
+
 ```
 <?php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
@@ -49,6 +52,7 @@ $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
 ```
 
 Let the fun begin:
+
 ```
 <?php
 //get some infos on your Devolo Home Control box:
@@ -75,12 +79,9 @@ echo $DHC->startScene("We go out")."<br>";
 ?>
 ```
 
-
 ##TODO
 
 - Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
-- Implement getAllBatteries() ?
-- Implement getAllConsumption() ?
 
 ##Credits
 
@@ -88,10 +89,23 @@ Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 
 ##Changes
+####v2017.3.1 (2017-03-08)
+- getDeviceBattery
+- getAllDevices
+- refreshDevice
+```
+$AllDevices = $DHC->getAllDevices();
+foreach ($AllDevices as $device)
+{
+	echo "Device:".$device['name']." : ".$device['batteryLevel']."<br>";
+}
+//or:
+$DHC->getDeviceBattery("My wall plug");
+```
 
 ####v2017.3.0 (2017-03-08)
 - Code breaking: all now is in a php class to avoid variable and php session mess with your own script.
-- New: No more need to get device before getting/changing its state.
+- New: No more need to get device before getting/changing its state, send its name as parameter.
 
 ####v2017.2.0 (2017-03-06)
 - Support http device
