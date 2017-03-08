@@ -11,6 +11,8 @@ The following devices are currently supported:
 - Door Sensor / Window Contact
 - http devices
 - Scenes
+- Timers (can only get Active state)
+- Rules (can only get Active state)
 
 Feel free to submit an issue or pull request to add more.
 
@@ -24,55 +26,72 @@ Can be installed on your external domain, but the api need access to your Devolo
 
 ##How-to
 
-1. Put config.php and phpDevoloAPI.php in a folder.
-2. Give the folder write permission.
-3. Set login, password and DHCcentralHost in config.php. These are your devolo web login/password and local Devolo central IP (lan) or url (wan) to access it.
-The api will first request some authorization data from www.mydevolo.com then write them back into config.php as they won't change till you don't change your login/password.
+Include phpDevoloAPI.php in your script and start it!
 
-DHC_init() will gather autorization datas and can take a few seconds. Run it only once in your script!
-
-- Include phpDevoloAPI.php in your script
-- Start it with DHC_init();
-- check it works:
+First time execution:
+The api will first request some authorization data from www.mydevolo.com. These data won't change for same user, so you can get them and directly pass them next time to get faster connection.
+Note them in your script or in a config file you include before creating DevoloDHC().
 ```
 <?php
-require($_SERVER['DOCUMENT_ROOT']."/scripts/devoloAPI/phpDevoloAPI.php");
-DHC_init();
-$infos = DHC_getInfos();
-$infos = json_encode($infos, JSON_PRETTY_PRINT);
-echo "<pre>".$infos."</pre>";
+require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
+$DHC = new DevoloDHC($login, $password, $localIP);
+$auth = $DHC->getAuth();
+echo "<pre>".json_encode($auth, JSON_PRETTY_PRINT)."</pre><br>";
 ?>
 ```
 
-Check state of a device:
+So note return values and next time, call $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
 ```
-$mydevice =  DHC_getDeviceByName("MyWallPlug");
-$isOn = DHC_isDeviceOn($mydevice);
-echo "isOn ".$mydevice['name'].": ".$isOn."<br>";
-```
-
-Turn a device on:
-```
-$mydevice =  DHC_getDeviceByName("MyWallPlug");
-DHC_turnDeviceOnOff($mydevice, 1);
+<?php
+require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
+$DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
+?>
 ```
 
-Check state of a Rule:
+Let the fun begin:
 ```
-$myrule = DHC_getRuleByName("MyDevoloRule");
-$isEnabled = DHC_isRuleOn($myrule);
-echo "isEnabled ".$myrule['name'].": ".$isEnabled."<br>";
+<?php
+//get some infos on your Devolo Home Control box:
+echo "__infos__<br>";
+$infos = $DHC->getInfos();
+echo "<pre>".json_encode($infos, JSON_PRETTY_PRINT)."</pre><br>";
+
+//for devices, rules, scenes, timers, you can call state or action by object or directly by name
+
+echo $DHC->isRuleActive("MyRule-in-DHC")."<br>";
+
+echo $DHC->isTimerActive("MyTimer-in-DHC")."<br>";
+
+//php won't print anything if off, as zero is treated as false. but if($tate == false) will work !
+echo "is on? ".$DHC->isDeviceOn("My Room wallPlug")."<br>";
+
+// TURN DEVICE ON(1) or OFF(0) (same as on/off switch in Devolo Home Control)!!
+//supported: all on/off devices and http devices
+echo "TurnOn:".$DHC->turnDeviceOnOff("My Room wallPlug", 1)."<br>";
+
+// START SCENE (same as play button in Devolo Home Control)!!
+echo $DHC->startScene("We go out")."<br>";
+
+?>
 ```
+
+
 ##TODO
 
 - Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
+- Implement getAllBatteries() ?
+- Implement getAllConsumption() ?
 
 ##Credits
 
-Done with invaluable help of source code from https://github.com/kdietrich/node-devolo!
+Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 
 ##Changes
+
+####v2017.3.0 (2017-03-08)
+- Code breaking: all now is in a php class to avoid variable and php session mess with your own script.
+- New: No more need to get device before getting/changing its state.
 
 ####v2017.2.0 (2017-03-06)
 - Support http device
