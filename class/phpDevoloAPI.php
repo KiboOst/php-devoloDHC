@@ -326,7 +326,7 @@ class DevoloDHC {
 							"uid" => $uid,
 							"sensors" => json_encode($elementUIDs),
 							"batteryLevel" => (isset($thisDevice["properties"]["batteryLevel"]) ? $thisDevice["properties"]["batteryLevel"] : "None"),
-							"model" => (isset($thisDevice["properties"]["deviceModelUID"]) ? $thisDevice["properties"]["batteryLevel"] : "None")
+							"model" => (isset($thisDevice["properties"]["deviceModelUID"]) ? $thisDevice["properties"]["deviceModelUID"] : "None")
 							);
 
 			array_push($devices, $device);
