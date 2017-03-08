@@ -102,6 +102,7 @@ foreach ($AllDevices as $device)
 //or:
 $DHC->getDeviceBattery("My wall plug");
 ```
+Note that wire connected device report -1, and virtual devices (http) report None.
 
 ####v2017.3.0 (2017-03-08)
 - Code breaking: all now is in a php class to avoid variable and php session mess with your own script.
