@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "2017.2.0";
+	public $_version = "2017.3.1";
 	public $_debug = 0;
 
 	protected $_Host = 'www.mydevolo.com';
@@ -16,11 +16,11 @@ class DevoloDHC {
 	protected $_passkey;
 	protected $_sessionID = null; //the one to get first!
 
-	protected $_AllZones = null;
-	protected $_AllDevices = null;
-	protected $_AllRules = null;
-	protected $_AllTimers = null;
-	protected $_AllScenes = null;
+	public $_AllZones = null;
+	public $_AllDevices = null;
+	public $_AllRules = null;
+	public $_AllTimers = null;
+	public $_AllScenes = null;
 
 	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off
 	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send
@@ -47,7 +47,7 @@ class DevoloDHC {
 	}
 
 	//user functions======================================================
-	//GET
+	//General
 	public function getAuth() //return array of infos for faster connections with all datas
 	{
 		$auth = array(
@@ -83,6 +83,7 @@ class DevoloDHC {
 		return $infos;
 	}
 
+	//GET
 	public function isRuleActive($rule)
 	{
 		if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
@@ -209,6 +210,34 @@ class DevoloDHC {
 		return $arrayStates;
 	}
 
+	public function refreshDevice($device)
+	{
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( is_string($device) ) return $device;
+
+		$refreshDevice = $this->fetchItems(array($device));
+		for($i=0; $i<count($this->_AllDevices); $i++)
+		{
+			$thisDevice = $this->_AllDevices[$i];
+			if ($thisDevice['uid'] == $device['uid'])
+			{
+				$this->_AllDevices[$i] = $thisDevice;
+				return $thisDevice;
+			}
+		}
+		return "Unfound device";
+	}
+
+	public function getDeviceBattery($device)
+	{
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( is_string($device) ) return $device;
+
+		return $device['batteryLevel'];
+	}
+
+	public function getAllDevices() { return $this->_AllDevices; }
+
 	//SET
 	public function startScene($scene)
 	{
@@ -264,7 +293,7 @@ class DevoloDHC {
 
 
 	//internal functions==================================================
-	protected function getAllDevices()
+	protected function getDevices()
 	{
 		if (count($this->_AllZones) == 0) $this->getZones();
 
@@ -296,6 +325,8 @@ class DevoloDHC {
 			$device = array("name" => $name,
 							"uid" => $uid,
 							"sensors" => json_encode($elementUIDs),
+							"batteryLevel" => (isset($thisDevice["properties"]["batteryLevel"]) ? $thisDevice["properties"]["batteryLevel"] : "None"),
+							"model" => (isset($thisDevice["properties"]["deviceModelUID"]) ? $thisDevice["properties"]["batteryLevel"] : "None")
 							);
 
 			array_push($devices, $device);
@@ -538,7 +569,7 @@ class DevoloDHC {
 		return $response;
 	}
 
-	protected function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc
+	public function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc
 	{
 		$devicesJson = json_encode($UIDSarray);
 		$json = '{
@@ -557,7 +588,7 @@ class DevoloDHC {
 		return $jsonArray;
 	}
 
-	protected function invokeOperation($sensor, $operation) //sensor string, authorized operation string !!
+	public function invokeOperation($sensor, $operation) //sensor string, authorized operation string !!
 	{
 		$jsonString = '{
 			"jsonrpc":"2.0",
@@ -573,7 +604,7 @@ class DevoloDHC {
 		return $jsonArray;
 	}
 
-	protected function sendCommand($jsonString) //not actually used, but works...
+	public function sendCommand($jsonString) //not actually used, but works...
 	{
 		$json = json_decode($jsonString);
 		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
@@ -659,7 +690,7 @@ class DevoloDHC {
 			$this->getSessionID();
 		}
 
-		$this->getAllDevices();
+		$this->getDevices();
 		return true;
 	}
 
