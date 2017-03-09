@@ -16,6 +16,8 @@ The following devices are currently supported:
 
 Feel free to submit an issue or pull request to add more.
 
+**This isn't an official API | USE AT YOUR OWN RISK!**
+
 ##Requirements
 - PHP5+
 - cURL
