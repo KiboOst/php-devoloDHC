@@ -89,10 +89,21 @@ Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 
 ##Changes
+
+####v2017.3.2 (2017-03-09)
+- New: getAllBatteries()
+You can now request all devices batteries (devices without battery won't be returned).
+If you pass an int as argument, it will return devices with battery level under argument:
+```
+$DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
+$AllBatteries = $DHC->getAllBatteries(20);
+echo "AllBatteries:<pre>".json_encode($AllBatteries, JSON_PRETTY_PRINT)."</pre><br>";
+```
+
 ####v2017.3.1 (2017-03-08)
-- getDeviceBattery
-- getAllDevices
-- refreshDevice
+- New: getDeviceBattery()
+- New: getAllDevices()
+- New: refreshDevice()
 ```
 $AllDevices = $DHC->getAllDevices();
 foreach ($AllDevices as $device)
