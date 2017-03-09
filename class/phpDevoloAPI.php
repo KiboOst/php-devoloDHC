@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "2017.3.2";
+	public $_version = "2017.3.3";
 	public $_debug = 0;
 
 	protected $_Host = 'www.mydevolo.com';
@@ -235,7 +235,7 @@ class DevoloDHC {
 
 		return $device['batteryLevel'];
 	}
-	
+
 	public function getAllBatteries($lowLevel=100)
 	{
 		$jsonDatas = array();
@@ -248,6 +248,33 @@ class DevoloDHC {
 
 			$datas = array("name" => $thisDeviceName, "battery_percent" => $thisBatLevel);
 			if ($thisBatLevel <= $lowLevel) array_push($jsonDatas, $datas);
+		}
+		return $jsonDatas;
+	}
+
+	public function getDailyDiary($numEvents=20)
+	{
+		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["devolo.DeviceEvents","retrieveDailyData",[0,0,'.$numEvents.']]}';
+		$result = $this->sendCommand($jsonString);
+
+		$jsonDatas = array();
+		$numEvents = count($result['result']); //may have less than requested
+		for($i=$numEvents-1; $i>=1; $i--) //put recent on top
+		{
+			$event = $result['result'][$i];
+			$deviceName = $event['deviceName'];
+			$deviceZone = $event['deviceZone'];
+			$author = $event['author'];
+			$timeOfDay = $event['timeOfDay'];
+			$timeOfDay = gmdate("H:i:s", $timeOfDay);
+
+			$datas = array(
+							"deviceName" => $deviceName,
+							"deviceZone" => $deviceZone,
+							"author" => $author,
+							"timeOfDay" => $timeOfDay
+							);
+			array_push($jsonDatas, $datas);
 		}
 		return $jsonDatas;
 	}
@@ -307,7 +334,12 @@ class DevoloDHC {
 		return $result;
 	}
 
+	public function resetSessionTimeout() //not used, should extend session time on the central.
+	{
 
+		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
+		$result = $this->sendCommand($jsonString);
+	}
 	//internal functions==================================================
 	protected function getDevices()
 	{
@@ -585,7 +617,7 @@ class DevoloDHC {
 		return $response;
 	}
 
-	public function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc
+	protected function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc
 	{
 		$devicesJson = json_encode($UIDSarray);
 		$json = '{
@@ -604,7 +636,7 @@ class DevoloDHC {
 		return $jsonArray;
 	}
 
-	public function invokeOperation($sensor, $operation) //sensor string, authorized operation string !!
+	protected function invokeOperation($sensor, $operation) //sensor string, authorized operation string !!
 	{
 		$jsonString = '{
 			"jsonrpc":"2.0",
@@ -620,7 +652,7 @@ class DevoloDHC {
 		return $jsonArray;
 	}
 
-	public function sendCommand($jsonString) //not actually used, but works...
+	public function sendCommand($jsonString) //directly send json to central. Only works when all required authorisations are set.
 	{
 		$json = json_decode($jsonString);
 		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
