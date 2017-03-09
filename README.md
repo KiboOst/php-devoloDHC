@@ -94,6 +94,13 @@ Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 ##Changes
 
+####v2017.3.3 (2017-03-09)
+- New: getDailyDiary(number_of_events)
+```
+$diary = $DHC->getDailyDiary(10);
+echo "<pre>diary:".json_encode($diary, JSON_PRETTY_PRINT)."</pre><br>";
+```
+
 ####v2017.3.2 (2017-03-09)
 - New: getAllBatteries()
 You can now request all devices batteries (devices without battery won't be returned).
