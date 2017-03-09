@@ -76,6 +76,10 @@ echo "TurnOn:".$DHC->turnDeviceOnOff("My Room wallPlug", 1)."<br>";
 // START SCENE (same as play button in Devolo Home Control)!!
 echo $DHC->startScene("We go out")."<br>";
 
+//print all devices datas:
+$AllDevices = $DHC->getAllDevices();
+echo "AllDevices:<pre>".json_encode($AllDevices, JSON_PRETTY_PRINT)."</pre><br>";
+
 ?>
 ```
 
