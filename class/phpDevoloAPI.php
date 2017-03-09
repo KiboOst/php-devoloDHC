@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "2017.3.1";
+	public $_version = "2017.3.2";
 	public $_debug = 0;
 
 	protected $_Host = 'www.mydevolo.com';
@@ -234,6 +234,22 @@ class DevoloDHC {
 		if ( is_string($device) ) return $device;
 
 		return $device['batteryLevel'];
+	}
+	
+	public function getAllBatteries($lowLevel=100)
+	{
+		$jsonDatas = array();
+		for($i=0; $i<count($this->_AllDevices); $i++)
+		{
+			$thisDevice = $this->_AllDevices[$i];
+			$thisDeviceName = $thisDevice['name'] ;
+			$thisBatLevel = $thisDevice['batteryLevel'];
+			if (($thisBatLevel == -1) or ($thisBatLevel == "None")) continue;
+
+			$datas = array("name" => $thisDeviceName, "battery_percent" => $thisBatLevel);
+			if ($thisBatLevel <= $lowLevel) array_push($jsonDatas, $datas);
+		}
+		return $jsonDatas;
 	}
 
 	public function getAllDevices() { return $this->_AllDevices; }
