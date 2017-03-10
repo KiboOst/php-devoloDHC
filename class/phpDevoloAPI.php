@@ -4,9 +4,9 @@ class DevoloDHC {
 	//api stuff:
 	public $_version = "2017.3.4";
 	public $_debug = 0;
-
 	protected $_Host = 'www.mydevolo.com';
 	protected $_apiVersion = '/v1';
+	protected $_POSTid = 0;
 
 	//user central stuff:
 	protected $_login;
@@ -645,6 +645,8 @@ class DevoloDHC {
 
 		if ($method == 'POST')
 			{
+				$json->{'id'}=$this->_POSTid;
+				$this->_POSTid++;
 				$data_string = json_encode($json);
 				if ($this->_debug >= 3) echo 'data_string: '.$data_string."<br>";
 				curl_setopt($curl, CURLOPT_HTTPHEADER, array(
