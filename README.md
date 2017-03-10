@@ -14,7 +14,7 @@ The following devices are currently supported:
 - Flood Sensor (get)
 - Humidity Sensor (get)
 - http devices (get/set)
-- Room Thermostat / Radiator Thermostat: not tested, should work.
+- Room Thermostat / Radiator Thermostat (get/set)
 - Scenes (get/set)
 - Timers (get)
 - Rules (get)
@@ -72,6 +72,8 @@ echo "<pre>".json_encode($infos, JSON_PRETTY_PRINT)."</pre><br>";
 
 //for devices, rules, scenes, timers, you can call state or action by object or directly by name
 
+//READING OPERATIONS:
+
 //Will return 'active' or 'inactive' string:
 echo $DHC->isRuleActive("MyRule-in-DHC")."<br>";
 echo $DHC->isTimerActive("MyTimer-in-DHC")."<br>";
@@ -110,19 +112,22 @@ $states = $DHC->getDeviceStates("My Siren");
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 //->fetch the desired state to use it in your script.
 
-// TURN DEVICE ON(1) or OFF(0) (same as on/off switch in Devolo Home Control)!!
+//CHANGING OPERATIONS:
+
+// TURN DEVICE ON(1) or OFF(0):
 //supported: all on/off devices and http devices
 echo "TurnOn:".$DHC->turnDeviceOnOff("My Room wallPlug", 1)."<br>";
-
-// START SCENE (same as play button in Devolo Home Control)!!
-echo $DHC->startScene("We go out")."<br>";
 
 //RUN HTTP DEVICE:
 $result = $DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course. 
 
-//print all devices datas:
-$AllDevices = $DHC->getAllDevices();
-echo "AllDevices:<pre>".json_encode($AllDevices, JSON_PRETTY_PRINT)."</pre><br>";
+// START SCENE:
+echo $DHC->startScene("We go out")."<br>";
+
+//CHANGE THERMOSTAT/VALVE VALUE:
+$targetValue = $DHC->setDeviceValue('My thermostat valve', 21);
+echo "<pre>".json_encode($targetValue, JSON_PRETTY_PRINT)."</pre><br>";
+
 ?>
 ```
 
@@ -137,7 +142,7 @@ Done with help of source code from https://github.com/kdietrich/node-devolo!
 ##Changes
 
 ####v2017.3.4 (2017-03-10)
-- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device!
+- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device like Motion Sensor, etc.
 
 ####v2017.3.3 (2017-03-09)
 - New: getDailyDiary(number_of_events)
