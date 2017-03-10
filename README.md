@@ -76,6 +76,37 @@ echo $DHC->isTimerActive("MyTimer-in-DHC")."<br>";
 //Check if a device is on (return 'on' or 'off' string)
 echo "is on? ".$DHC->isDeviceOn("My Room wallPlug")."<br>";
 
+//check a device battery level:
+$batteryLevel = $DHC->getDeviceBattery('my wall switch 1');
+echo "batteryLevel:".$batteryLevel."<br>";
+
+//or:
+$AllDevices = $DHC->getAllDevices();
+foreach ($AllDevices as $device)
+{
+	echo "Device:".$device['name']." : ".$device['batteryLevel']."<br>";
+}
+
+//get all battery level under 20% (ommit argument to have all batteries levels):
+$AllBatteries = $DHC->getAllBatteries(20);
+echo "AllBatteries:<pre>".json_encode($AllBatteries, JSON_PRETTY_PRINT)."</pre><br>";
+
+//get daily diary, last number of events:
+$diary = $DHC->getDailyDiary(10);
+echo "<pre>diary:".json_encode($diary, JSON_PRETTY_PRINT)."</pre><br>";
+
+//Get all sensors states from all device in your central (can be slow!):
+$AllDevices = $DHC->getAllDevices();
+foreach ($AllDevices as $device) {
+	$states = $DHC->getDeviceStates($device);
+	echo "<pre>states ".$device['name'].":".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";  //DEBUGGGGGGGGGGG
+}
+
+//Or get one device states:
+$states = $DHC->getDeviceStates("My Siren");
+echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
+//->fetch the desired state to use it in your script.
+
 // TURN DEVICE ON(1) or OFF(0) (same as on/off switch in Devolo Home Control)!!
 //supported: all on/off devices and http devices
 echo "TurnOn:".$DHC->turnDeviceOnOff("My Room wallPlug", 1)."<br>";
@@ -83,13 +114,14 @@ echo "TurnOn:".$DHC->turnDeviceOnOff("My Room wallPlug", 1)."<br>";
 // START SCENE (same as play button in Devolo Home Control)!!
 echo $DHC->startScene("We go out")."<br>";
 
+//RUN HTTP DEVICE:
+$result = $DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course. 
+
 //print all devices datas:
 $AllDevices = $DHC->getAllDevices();
 echo "AllDevices:<pre>".json_encode($AllDevices, JSON_PRETTY_PRINT)."</pre><br>";
 ?>
 ```
-
-See Changes below for more stuff.
 
 ##TODO
 
@@ -99,75 +131,31 @@ See Changes below for more stuff.
 
 Done with help of source code from https://github.com/kdietrich/node-devolo!
 
-
 ##Changes
 
 ####v2017.3.4 (2017-03-10)
-
-- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, lastactivity etc from a device!
-```
-//report all sensors states from all device in your central (can be slow!):
-$AllDevices = $DHC->getAllDevices();
-foreach ($AllDevices as $device) {
-	$states = $DHC->getDeviceStates($device);
-	echo "<pre>states ".$device['name'].":".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";  //DEBUGGGGGGGGGGG
-}
-
-//or get one device states:
-$states = $DHC->getDeviceStates("My Siren");
-echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
-//fetch the desired state to use it in your script.
-```
+- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device!
 
 ####v2017.3.3 (2017-03-09)
 - New: getDailyDiary(number_of_events)
-```
-$diary = $DHC->getDailyDiary(10);
-echo "<pre>diary:".json_encode($diary, JSON_PRETTY_PRINT)."</pre><br>";
-```
 
 ####v2017.3.2 (2017-03-09)
 - New: getAllBatteries()
 You can now request all devices batteries (devices without battery won't be returned).
 If you pass an int as argument, it will return devices with battery level under argument:
-```
-$DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
-$AllBatteries = $DHC->getAllBatteries(20);
-echo "AllBatteries:<pre>".json_encode($AllBatteries, JSON_PRETTY_PRINT)."</pre><br>";
-```
 
 ####v2017.3.1 (2017-03-08)
-- New: getDeviceBattery()
+- New: getDeviceBattery() Note that wire connected device report -1, and virtual devices (http) report None.
 - New: getAllDevices()
 - New: refreshDevice()
-```
-$AllDevices = $DHC->getAllDevices();
-foreach ($AllDevices as $device)
-{
-	echo "Device:".$device['name']." : ".$device['batteryLevel']."<br>";
-}
-//or:
-$DHC->getDeviceBattery("My wall plug");
-```
-Note that wire connected device report -1, and virtual devices (http) report None.
 
 ####v2017.3.0 (2017-03-08)
 - Code breaking: all now is in a php class to avoid variable and php session mess with your own script.
-- New: No more need to get device before getting/changing its state, send its name as parameter.
+- New: No more need to get device/scene before getting/changing its state, send its name as parameter.
 
 ####v2017.2.0 (2017-03-06)
 - Support http device
 - Support Scenes
-```
-Run http device:
-$myhttpDevice =  DHC_getDeviceByName("RequestStuff");
-$result = DHC_turnDeviceOnOff($myhttpDevice, 1);
-
-Run scene:
-$myScene = DHC_getSceneByName("PlayStuff");
-$result = DHC_startScene($myScene);
-```
-Anyway, you should know your http device url, and scenes can be triggered with scene sharing url. So these are not really usefull.
 
 ####v2017.1.0 (2017-03-04)
 - First public version.
