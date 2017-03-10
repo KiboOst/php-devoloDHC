@@ -1,9 +1,9 @@
 #php-devoloDHC
 
-##php 'api' giving acces to Devolo Home Control
+##php API for Devolo Home Control
 (C) 2017, KiboOst
 
-This php code allows you to control your Devolo Home Control devices from a php script of your.
+This php API allows you to control your Devolo Home Control devices.
 The following devices are currently supported:
 
 - Smart Metering Plug (get/set)
