@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 	//api stuff:
-	public $_version = "2017.3.4";
+	public $_version = "2017.3.41";
 	public $_debug = 0;
 	protected $_Host = 'www.mydevolo.com';
 	protected $_apiVersion = '/v1';
@@ -27,7 +27,8 @@ class DevoloDHC {
 	//types stuff:
 	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off operation
 	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send operation
-	protected $_SensorsNoValues = array("HttpRequest"); //supported devices type for send
+	protected $_DevicesSendValue = array("MultiLevelSwitch"); //supported devices type for sendValue operation
+	protected $_SensorsNoValues = array("HttpRequest"); //virtual devices
 	protected $_SensorValuesByType = array(
 										'MildewSensor' => array('sensorType', 'state'),
 										'BinarySensor' => array('sensorType', 'state'),
@@ -41,7 +42,8 @@ class DevoloDHC {
 										'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
 										'SirenMultiLevelSensor' => array('sensorType', 'value'),
 										'LastActivity' => array('lastActivityTime'),
-										'RemoteControl' => array('keyCount', 'keyPressed')
+										'RemoteControl' => array('keyCount', 'keyPressed'),
+										'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
 										);
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
@@ -96,7 +98,7 @@ class DevoloDHC {
 	public function isRuleActive($rule)
 	{
 		if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
-		if ( is_string($rule) ) return $rule;
+		if ( isset($rule['error']) ) return $rule;
 
 		$jsonArray = $this->fetchItems(array($rule["element"]));
 		$state = $jsonArray["result"]["items"][0]["properties"]["enabled"];
@@ -107,7 +109,7 @@ class DevoloDHC {
 	public function isTimerActive($timer)
 	{
 		if ( is_string($timer) ) $timer = $this->getTimerByName($timer);
-		if ( is_string($timer) ) return $timer;
+		if ( isset($timer['error']) ) return $timer;
 
 		return $this->isRuleActive($timer);
 	}
@@ -115,7 +117,7 @@ class DevoloDHC {
 	public function isDeviceOn($device) //return true of false if find a sensor state in device
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
-		if ( is_string($device) ) return $device;
+		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
 		if ($sensors == null) return "Unfound sensor for device";
@@ -150,7 +152,7 @@ class DevoloDHC {
 			$thisDevice = $this->_AllDevices[$i];
 			if ($thisDevice['name'] == $name) return $thisDevice;
 		}
-		return "Unfound device";
+		return array('error' => 'Unfound device');
 	}
 
 	public function getRuleByName($name)
@@ -162,7 +164,7 @@ class DevoloDHC {
 			$thisRule = $this->_AllRules[$i];
 			if ($thisRule['name'] == $name) return $thisRule;
 		}
-		return "Unfound rule";
+		return array('error' => 'Unfound rule');
 	}
 
 	public function getTimerByName($name)
@@ -174,7 +176,7 @@ class DevoloDHC {
 			$thisTimer = $this->_AllTimers[$i];
 			if ($thisTimer['name'] == $name) return $thisTimer;
 		}
-		return "Unfound timer";
+		return array('error' => 'Unfound timer');
 	}
 
 	public function getSceneByName($name)
@@ -186,16 +188,16 @@ class DevoloDHC {
 			$thisScene = $this->_AllScenes[$i];
 			if ($thisScene['name'] == $name) return $thisScene;
 		}
-		return "Unfound scene";
+		return array('error' => 'Unfound scene');
 	}
 
 	public function getDeviceStates($device, $DebugReport=null) //return array of sensor type and state
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
-		if ( is_string($device) ) return $device;
+		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
-		if ($sensors == null) return "Unfound sensor";
+		if ($sensors == null) return array('error' => 'Unfound device');
 
 		//fetch sensors:
 		$sensors = json_decode($sensors, true);
@@ -232,52 +234,10 @@ class DevoloDHC {
 		return $arrayStates;
 	}
 
-	protected function formatStates($sensorType, $key, $value)
-	{
-		if ($sensorType=="Meter" and $key=="totalValue") return $value."kWh";
-		if ($sensorType=="Meter" and $key=="currentValue") return $value."W";
-		if ($key=="sinceTime")
-		{
-			$ts = $value;
-			$ts = substr($ts, 0, -3) - 3600; //microtime timestamp from Berlin
-			$date = new DateTime();
-			$date->setTimestamp($ts);
-			$date->setTimezone(new DateTimeZone(date_default_timezone_get())); //set it to php server timezone
-			$date = $date->format('d.m.Y H:i');
-			return $date;
-		}
-		if ($sensorType=="LastActivity" and $key=="lastActivityTime")
-		{
-			if ($value == -1) return "Never";
-			//convert javascript timestamp to date:
-			$ts = $value;
-			$ts = substr($ts, 0, -3) - 3600; //microtime timestamp from Berlin
-			$date = new DateTime();
-			$date->setTimestamp($ts);
-			$date->setTimezone(new DateTimeZone(date_default_timezone_get())); //set it to php server timezone
-
-			//format it:
-			$nowDate = new DateTime();
-			$interval = $nowDate->diff($date)->days;
-			switch($interval) {
-				case 0:
-					$date = 'Today '.$date->format('H:i');
-					break;
-				case -1:
-					$date = 'Yesterday '.$date->format('H:i');
-					break;
-				default:
-					$date = $date->format('d.m.Y H:i');
-			}
-			return $date;
-		}
-		return $value;
-	}
-
 	public function refreshDevice($device)
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
-		if ( is_string($device) ) return $device;
+		if ( isset($device['error']) ) return $device;
 
 		$refreshDevice = $this->fetchItems(array($device));
 		for($i=0; $i<count($this->_AllDevices); $i++)
@@ -289,13 +249,13 @@ class DevoloDHC {
 				return $thisDevice;
 			}
 		}
-		return "Unfound device";
+		return array('error' => 'Unfound device');
 	}
 
 	public function getDeviceBattery($device)
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
-		if ( is_string($device) ) return $device;
+		if ( isset($device['error']) ) return $device;
 
 		return $device['batteryLevel'];
 	}
@@ -349,7 +309,7 @@ class DevoloDHC {
 	public function startScene($scene)
 	{
 		if ( is_string($scene) ) $scene = $this->getSceneByName($scene);
-		if ( is_string($scene) ) return $scene;
+		if ( isset($scene['error']) ) return $scene;
 
 		$element = $scene['element'];
 		$answer = $this->invokeOperation($element, "start");
@@ -360,10 +320,10 @@ class DevoloDHC {
 	public function turnDeviceOnOff($device, $state=0)
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
-		if ( is_string($device) ) return $device;
+		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
-		if ($sensors == null) return "Unfound sensor for device";
+		if ($sensors == null) return array('error' => 'No sensor found in this device');
 
 		$sensors = json_decode($sensors, true);
 
@@ -387,23 +347,39 @@ class DevoloDHC {
 				return $result;
 			}
 		}
-		return false;
+		return array('error' => 'No supported sensor for this device');
 	}
 
-	public function turnSensorOnOff($sensor, $state=0) //no string!! for advanced users :-)
+	public function setDeviceValue($device, $value)
 	{
-		$operation = ($state == 0 ? 'turnOff' : 'turnOn');
-		$answer = $this->invokeOperation($sensor, $operation);
-		$result = ( ($answer['error'] == null) ? true : false );
-		return $result;
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( isset($device['error']) ) return $device;
+
+		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
+		if ($sensors == null) return array('error' => 'No sensor found in this device');
+
+		for($i=0; $i<count($sensors); $i++)
+		{
+			$sensor = $sensors[$i];
+			$sensorType = $this->getSensorType($sensor);
+
+			if (in_array($sensorType, $this->_DevicesSendValue))
+			{
+				$operation = 'sendValue';
+				$answer = $this->invokeOperation($sensor, $operation, $value);
+				$result = ( ($answer["result"]['error'] == null) ? true : false );
+				return $result;
+			}
+		}
+		return array('error' => 'No supported sensor for this device');
 	}
 
 	public function resetSessionTimeout() //not used, should extend session time on the central.
 	{
-
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
 		$result = $this->sendCommand($jsonString);
 	}
+
 	//internal functions==================================================
 	protected function getDevices()
 	{
@@ -593,6 +569,48 @@ class DevoloDHC {
 		}
 	}
 
+	protected function formatStates($sensorType, $key, $value)
+	{
+		if ($sensorType=="Meter" and $key=="totalValue") return $value."kWh";
+		if ($sensorType=="Meter" and $key=="currentValue") return $value."W";
+		if ($key=="sinceTime")
+		{
+			$ts = $value;
+			$ts = substr($ts, 0, -3) - 3600; //microtime timestamp from Berlin
+			$date = new DateTime();
+			$date->setTimestamp($ts);
+			$date->setTimezone(new DateTimeZone(date_default_timezone_get())); //set it to php server timezone
+			$date = $date->format('d.m.Y H:i');
+			return $date;
+		}
+		if ($sensorType=="LastActivity" and $key=="lastActivityTime")
+		{
+			if ($value == -1) return "Never";
+			//convert javascript timestamp to date:
+			$ts = $value;
+			$ts = substr($ts, 0, -3) - 3600; //microtime timestamp from Berlin
+			$date = new DateTime();
+			$date->setTimestamp($ts);
+			$date->setTimezone(new DateTimeZone(date_default_timezone_get())); //set it to php server timezone
+
+			//format it:
+			$nowDate = new DateTime();
+			$interval = $nowDate->diff($date)->days;
+			switch($interval) {
+				case 0:
+					$date = 'Today '.$date->format('H:i');
+					break;
+				case -1:
+					$date = 'Yesterday '.$date->format('H:i');
+					break;
+				default:
+					$date = $date->format('d.m.Y H:i');
+			}
+			return $date;
+		}
+		return $value;
+	}
+
 	protected function getSensorType($sensor)
 	{
 		$sensorType = explode("devolo.", $sensor);
@@ -702,13 +720,13 @@ class DevoloDHC {
 		return $jsonArray;
 	}
 
-	protected function invokeOperation($sensor, $operation) //sensor string, authorized operation string !!
+	protected function invokeOperation($sensor, $operation, $value=null) //sensor string, authorized operation string !!
 	{
+		$value = '['.$value.']';
 		$jsonString = '{
 			"jsonrpc":"2.0",
 			"method":"FIM/invokeOperation",
-			"params":[
-				"'.$sensor.'","'.$operation.'",[]]}';
+			"params":["'.$sensor.'","'.$operation.'",'.$value.']}';
 
 		$json = json_decode($jsonString);
 		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
