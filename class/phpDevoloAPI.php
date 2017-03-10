@@ -189,7 +189,7 @@ class DevoloDHC {
 		return "Unfound scene";
 	}
 
-	public function getDeviceStates($device) //return array of sensor type and state
+	public function getDeviceStates($device, $DebugReport=null) //return array of sensor type and state
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( is_string($device) ) return $device;
@@ -209,6 +209,7 @@ class DevoloDHC {
 			if ($param != null)
 			{
 				$sensorDatas = $this->fetchItems(array($sensor));
+				if ($DebugReport == true) echo "<br><pre>".json_encode($sensorDatas, JSON_PRETTY_PRINT)."</pre><br>";
 				$jsonSensor = array('sensorType' => $sensorType);
 				foreach ($param as $key)
 				{
