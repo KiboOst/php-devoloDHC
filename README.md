@@ -6,13 +6,18 @@
 This php code allows you to control your Devolo Home Control devices from a php script of your.
 The following devices are currently supported:
 
-- Smart Metering Plug
-- Motion Sensor
-- Door Sensor / Window Contact
-- http devices
-- Scenes
-- Timers (can only get Active state)
-- Rules (can only get Active state)
+- Smart Metering Plug (get/set)
+- Motion Sensor (get)
+- Door/Window Contact (get)
+- Wall Switch (get)
+- Siren (get/set)
+- Flood Sensor (get)
+- Humidity Sensor (get)
+- http devices (get/set)
+- Room Thermostat / Radiator Thermostat: not tested, should work.
+- Scenes (get/set)
+- Timers (get)
+- Rules (get)
 
 Feel free to submit an issue or pull request to add more.
 
@@ -64,11 +69,11 @@ echo "<pre>".json_encode($infos, JSON_PRETTY_PRINT)."</pre><br>";
 
 //for devices, rules, scenes, timers, you can call state or action by object or directly by name
 
+//Will return 'active' or 'inactive' string:
 echo $DHC->isRuleActive("MyRule-in-DHC")."<br>";
-
 echo $DHC->isTimerActive("MyTimer-in-DHC")."<br>";
 
-//php won't print anything if off, as zero is treated as false. but if($tate == false) will work !
+//Check if a device is on (return 'on' or 'off' string)
 echo "is on? ".$DHC->isDeviceOn("My Room wallPlug")."<br>";
 
 // TURN DEVICE ON(1) or OFF(0) (same as on/off switch in Devolo Home Control)!!
@@ -81,13 +86,14 @@ echo $DHC->startScene("We go out")."<br>";
 //print all devices datas:
 $AllDevices = $DHC->getAllDevices();
 echo "AllDevices:<pre>".json_encode($AllDevices, JSON_PRETTY_PRINT)."</pre><br>";
-
 ?>
 ```
 
+See Changes below for more stuff.
+
 ##TODO
 
-- Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
+- Waiting Devolo flush modules to integrate them (shutter, relay, dimmer). Relay, Dimmer and Shutter are in the central firmware yet, but will have to get some to fully support it (last availability is March/April 2017).
 
 ##Credits
 
@@ -95,6 +101,23 @@ Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 
 ##Changes
+
+####v2017.3.4 (2017-03-10)
+
+- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, lastactivity etc from a device!
+```
+//report all sensors states from all device in your central (can be slow!):
+$AllDevices = $DHC->getAllDevices();
+foreach ($AllDevices as $device) {
+	$states = $DHC->getDeviceStates($device);
+	echo "<pre>states ".$device['name'].":".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";  //DEBUGGGGGGGGGGG
+}
+
+//or get one device states:
+$states = $DHC->getDeviceStates("My Siren");
+echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
+//fetch the desired state to use it in your script.
+```
 
 ####v2017.3.3 (2017-03-09)
 - New: getDailyDiary(number_of_events)
