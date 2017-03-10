@@ -1,13 +1,14 @@
 <?php
 
 class DevoloDHC {
-
-	public $_version = "2017.3.3";
+	//api stuff:
+	public $_version = "2017.3.4";
 	public $_debug = 0;
 
 	protected $_Host = 'www.mydevolo.com';
 	protected $_apiVersion = '/v1';
 
+	//user central stuff:
 	protected $_login;
 	protected $_password;
 	protected $_localHost;
@@ -16,24 +17,32 @@ class DevoloDHC {
 	protected $_passkey;
 	protected $_sessionID = null; //the one to get first!
 
+	//central stuff stuff(!):
 	public $_AllZones = null;
 	public $_AllDevices = null;
 	public $_AllRules = null;
 	public $_AllTimers = null;
 	public $_AllScenes = null;
 
-	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off
-	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send
-
-	protected $_SensorTypes = array(
-										'BinarySwitch' => 'state', //on/off Devolo wall plug
-										'BinarySensor' => 'state', //alarm on/off Devolo MotionSensor or Devolo  Door/Win sensor
-										'SirenBinarySensor' => 'state', //Devolo Siren alarm on/off
-										'Meter' => 'currentValue', //watts Devolo wall plug
-										'MultiLevelSensor' => 'value', //Fibaro smoke sensor
-										'SirenMultiLevelSwitch' => 'value', //Devolo Siren ??
-										'SirenMultiLevelSensor' => 'value' //Devolo Siren ??
-									);
+	//types stuff:
+	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off operation
+	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send operation
+	protected $_SensorsNoValues = array("HttpRequest"); //supported devices type for send
+	protected $_SensorValuesByType = array(
+										'MildewSensor' => array('sensorType', 'state'),
+										'BinarySensor' => array('sensorType', 'state'),
+										'BinarySwitch' => array('switchType', 'state', 'targetState'),
+										'SirenBinarySensor' => array('sensorType', 'state'),
+										'Meter' => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
+										'MultiLevelSensor' => array('sensorType', 'value'),
+										'HumidityBarZone' => array('sensorType', 'value'),
+										'DewpointSensor' => array('sensorType', 'value'),
+										'HumidityBarValue' => array('sensorType', 'value'),
+										'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
+										'SirenMultiLevelSensor' => array('sensorType', 'value'),
+										'LastActivity' => array('lastActivityTime'),
+										'RemoteControl' => array('keyCount', 'keyPressed')
+										);
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -47,7 +56,7 @@ class DevoloDHC {
 	}
 
 	//user functions======================================================
-	//General
+	//Infos
 	public function getAuth() //return array of infos for faster connections with all datas
 	{
 		$auth = array(
@@ -83,14 +92,16 @@ class DevoloDHC {
 		return $infos;
 	}
 
-	//GET
+	//IS
 	public function isRuleActive($rule)
 	{
 		if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
 		if ( is_string($rule) ) return $rule;
 
 		$jsonArray = $this->fetchItems(array($rule["element"]));
-		return $jsonArray["result"]["items"][0]["properties"]["enabled"];
+		$state = $jsonArray["result"]["items"][0]["properties"]["enabled"];
+		$state = ($state > 0 ? "active" : "inactive");
+		return $state;
 	}
 
 	public function isTimerActive($timer)
@@ -118,19 +129,20 @@ class DevoloDHC {
 
 			if (in_array($sensorType, $this->_DevicesOnOff))
 			{
-				$param = $this->getStatebyType($sensorType);
-				if ($param != null)
+				$sensorDatas = $this->fetchItems(array($sensor));
+				if ( isset($sensorDatas["result"]["items"][0]["properties"]["state"]) )
 				{
-					$sensorDatas = $this->fetchItems(array($sensor));
-					$state = $sensorDatas["result"]["items"][0]["properties"][$param];
-					$isOn = ($state > 0 ? true : false);
+					$state = $sensorDatas["result"]["items"][0]["properties"]["state"];
+					$isOn = ($state > 0 ? "on" : "off");
 					return $isOn;
 				}
+				$param = $this->getValuesByType($sensorType);
 			}
 		}
 		return "Unfound OnOff sensor for device";
 	}
 
+	//GET
 	public function getDeviceByName($name)
 	{
 		for($i=0; $i<count($this->_AllDevices); $i++)
@@ -179,8 +191,11 @@ class DevoloDHC {
 
 	public function getDeviceStates($device) //return array of sensor type and state
 	{
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( is_string($device) ) return $device;
+
 		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
-		if ($sensors == null) return "Unfound device";
+		if ($sensors == null) return "Unfound sensor";
 
 		//fetch sensors:
 		$sensors = json_decode($sensors, true);
@@ -190,24 +205,72 @@ class DevoloDHC {
 		{
 			$sensor = $sensors[$i];
 			$sensorType = $this->getSensorType($sensor);
-			$param = $this->getStatebyType($sensorType);
+			$param = $this->getValuesByType($sensorType);
 			if ($param != null)
 			{
 				$sensorDatas = $this->fetchItems(array($sensor));
-				$state = $sensorDatas["result"]["items"][0]["properties"][$param];
-
-				$data = array('type' => $sensorType,
-								'state' => $state);
-				array_push($arrayStates, $data);
+				$jsonSensor = array('sensorType' => $sensorType);
+				foreach ($param as $key)
+				{
+					$value = $sensorDatas["result"]["items"][0]["properties"][$key];
+					//Seems Devolo doesn't know all about its own motion sensor...
+					if ($key=="sensorType" and $value=="unknown") continue;
+					//echo "sensorType:".$sensorType.", key:".$key.", value:".$value."<br>";
+					$value = $this->formatStates($sensorType, $key, $value);
+					$jsonSensor[$key] = $value;
+				}
+				array_push($arrayStates, $jsonSensor);
 			}
-			else //debug!!!
+			elseif( !in_array($sensorType, $this->_SensorsNoValues) ) //Unknown, unsupported sensor!
 			{
 				$sensorDatas = $this->fetchItems(array($sensor));
-				echo "DEBUG - UNKNOWN PARAM!!!!<br>";
-				echo "sensor state: ".json_encode($sensorDatas)."<br>";
+				echo "DEBUG - UNKNOWN PARAM - Please help and report this message on https://github.com/KiboOst/php-devoloDHC or email it to".base64_decode('a2lib29zdEBmcmVlLmZy')." <br>";
+				echo "<pre>infos:".json_encode($sensorDatas, JSON_PRETTY_PRINT)."</pre><br>";
 			}
 		}
 		return $arrayStates;
+	}
+
+	protected function formatStates($sensorType, $key, $value)
+	{
+		if ($sensorType=="Meter" and $key=="totalValue") return $value."kWh";
+		if ($sensorType=="Meter" and $key=="currentValue") return $value."W";
+		if ($key=="sinceTime")
+		{
+			$ts = $value;
+			$ts = substr($ts, 0, -3) - 3600; //microtime timestamp from Berlin
+			$date = new DateTime();
+			$date->setTimestamp($ts);
+			$date->setTimezone(new DateTimeZone(date_default_timezone_get())); //set it to php server timezone
+			$date = $date->format('d.m.Y H:i');
+			return $date;
+		}
+		if ($sensorType=="LastActivity" and $key=="lastActivityTime")
+		{
+			if ($value == -1) return "Never";
+			//convert javascript timestamp to date:
+			$ts = $value;
+			$ts = substr($ts, 0, -3) - 3600; //microtime timestamp from Berlin
+			$date = new DateTime();
+			$date->setTimestamp($ts);
+			$date->setTimezone(new DateTimeZone(date_default_timezone_get())); //set it to php server timezone
+
+			//format it:
+			$nowDate = new DateTime();
+			$interval = $nowDate->diff($date)->days;
+			switch($interval) {
+				case 0:
+					$date = 'Today '.$date->format('H:i');
+					break;
+				case -1:
+					$date = 'Yesterday '.$date->format('H:i');
+					break;
+				default:
+					$date = $date->format('d.m.Y H:i');
+			}
+			return $date;
+		}
+		return $value;
 	}
 
 	public function refreshDevice($device)
@@ -538,9 +601,9 @@ class DevoloDHC {
 		return $sensorType;
 	}
 
-	protected function getStatebyType($sensorType) //ex: devolo.BinarySensor:hdm:ZWave:D8F7DDE2/10
+	protected function getValuesByType($sensorType) //ex: devolo.BinarySensor:hdm:ZWave:D8F7DDE2/10
 	{
-		foreach ($this->_SensorTypes as $type => $param)
+		foreach ($this->_SensorValuesByType as $type => $param)
 		{
 			if ($type == $sensorType) return $param;
 		}
