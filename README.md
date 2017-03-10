@@ -19,6 +19,8 @@ The following devices are currently supported:
 - Timers (get)
 - Rules (get)
 
+Changing settings will appear in Devolo web interface / Apps daily diary with your account as usual.
+
 Feel free to submit an issue or pull request to add more.
 
 **This isn't an official API | USE AT YOUR OWN RISK!**
@@ -27,13 +29,14 @@ Feel free to submit an issue or pull request to add more.
 - PHP5+
 - cURL
 
-Can be installed on your lan, but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
+You can use this API on your lan (easyphp, Synology DSM, etc), but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
 Can be installed on your external domain, but the api need access to your Devolo Home Control box. Can be done throw NAT/PAT with a dyndns. In this case, specify the url as $localIP.
 
 
 ##How-to
-
-Include phpDevoloAPI.php in your script.
+- Get class/phpDevoloAPI.php and put it on your server
+- Include phpDevoloAPI.php in your script.
+- That's all!
 
 First time execution:
 The api will first request some authorization data from www.mydevolo.com.
