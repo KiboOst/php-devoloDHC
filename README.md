@@ -7,7 +7,6 @@ This php API allows you to control your Devolo Home Control devices.
 The following devices are currently supported:
 
 - Smart Metering Plug (get/set)
-- Door/Window Contact (get)
 - Wall Switch (get/set)
 - Siren (get/set)
 - http devices (get/set)
@@ -15,6 +14,7 @@ The following devices are currently supported:
 - Flood Sensor (get)
 - Humidity Sensor (get)
 - Motion Sensor (get)
+- Door/Window Contact (get)
 - Scenes (get/set)
 - Timers (get)
 - Rules (get)
