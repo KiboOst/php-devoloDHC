@@ -113,6 +113,9 @@ $states = $DHC->getDeviceStates("My Siren");
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 //->fetch the desired state to use it in your script.
 
+//get url from http device: (return url string or {"error": "This is not an http virtual device"}
+$url= $DHC->getDeviceURL('myhttp device');
+
 //You can also ask one sensor data for any device, like luminosity from a Motion Sensor or energy from a Wall Plug:
 $data = $DHC->getDeviceData('MyMotionSensor', 'light');
 echo $data['value']."<br>";
