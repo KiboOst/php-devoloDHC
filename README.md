@@ -24,6 +24,7 @@ Changing settings will appear in Devolo web interface / Apps daily diary with yo
 Feel free to submit an issue or pull request to add more.
 
 **This isn't an official API | USE AT YOUR OWN RISK!**
+_Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allow._
 
 ##Requirements
 - PHP5+
