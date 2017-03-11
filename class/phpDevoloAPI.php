@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "2017.3.6";
+	public $_version = "2017.3.7";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -77,10 +77,8 @@ class DevoloDHC {
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
-		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
+		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true): null);
 		if ($sensors == null) return "Unfound sensor for device";
-
-		$sensors = json_decode($sensors, true);
 
 		for($i=0; $i<count($sensors); $i++)
 		{
@@ -108,11 +106,10 @@ class DevoloDHC {
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
-		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
+		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
 		if ($sensors == null) return array('error' => 'Unfound device');
 
 		//fetch sensors:
-		$sensors = json_decode($sensors, true);
 		$arrayStates = array();
 
 		for($i=0; $i<count($sensors); $i++)
@@ -145,7 +142,7 @@ class DevoloDHC {
 		}
 		return $arrayStates;
 	}
-	
+
 	public function getDeviceData($device, $askData=null) //get device sensor data. If not asked data, return available datas
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
@@ -165,14 +162,6 @@ class DevoloDHC {
 		return $error;
 	}
 
-	public function getDeviceBattery($device)
-	{
-		if ( is_string($device) ) $device = $this->getDeviceByName($device);
-		if ( isset($device['error']) ) return $device;
-
-		return $device['batteryLevel'];
-	}
-	
 	public function getDeviceURL($device)
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
@@ -185,6 +174,14 @@ class DevoloDHC {
 		$hdmDatas = $this->fetchItems(array($hdm));
 		$url = $hdmDatas['result']['items'][0]['properties']['httpSettings']['request'];
 		return $url;
+	}
+
+	public function getDeviceBattery($device)
+	{
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( isset($device['error']) ) return $device;
+
+		return $device['batteryLevel'];
 	}
 
 	public function getAllBatteries($lowLevel=100)
@@ -249,10 +246,8 @@ class DevoloDHC {
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
-		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
+		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
 		if ($sensors == null) return array('error' => 'No sensor found in this device');
-
-		$sensors = json_decode($sensors, true);
 
 		for($i=0; $i<count($sensors); $i++)
 		{
@@ -282,7 +277,7 @@ class DevoloDHC {
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
-		$sensors = (isset($device['sensors']) ? $device['sensors'] : null);
+		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
 		if ($sensors == null) return array('error' => 'No sensor found in this device');
 
 		for($i=0; $i<count($sensors); $i++)
@@ -294,6 +289,30 @@ class DevoloDHC {
 			{
 				$operation = 'sendValue';
 				$answer = $this->invokeOperation($sensor, $operation, $value);
+				$result = ( ($answer["result"]['error'] == null) ? true : false );
+				return $result;
+			}
+		}
+		return array('error' => 'No supported sensor for this device');
+	}
+
+	public function pressDeviceKey($device, $key=null)
+	{
+		if (!isset($key)) return array('error' => 'No key to press');
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( isset($device['error']) ) return $device;
+
+		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
+		if ($sensors == null) return array('error' => 'No sensor found in this device');
+
+		for($i=0; $i<count($sensors); $i++)
+		{
+			$sensor = $sensors[$i];
+			$sensorType = $this->getSensorType($sensor);
+			if (in_array($sensorType, $this->_DevicesPressKey))
+			{
+				$operation = 'pressKey';
+				$answer = $this->invokeOperation($sensor, $operation, $key);
 				$result = ( ($answer["result"]['error'] == null) ? true : false );
 				return $result;
 			}
@@ -390,7 +409,6 @@ class DevoloDHC {
 							"batteryLevel" => (isset($thisDevice["properties"]["batteryLevel"]) ? $thisDevice["properties"]["batteryLevel"] : "None"),
 							"model" => (isset($thisDevice["properties"]["deviceModelUID"]) ? $thisDevice["properties"]["deviceModelUID"] : "None")
 							);
-
 			array_push($devices, $device);
 		}
 		$this->_AllDevices = $devices;
@@ -804,6 +822,7 @@ class DevoloDHC {
 	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off operation
 	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send operation
 	protected $_DevicesSendValue = array("MultiLevelSwitch"); //supported devices type for sendValue operation
+	protected $_DevicesPressKey = array("RemoteControl"); //supported devices type for pressKey operation
 	protected $_SensorsNoValues = array("HttpRequest"); //virtual devices
 	protected $_SensorValuesByType = array(
 										'MildewSensor' => array('sensorType', 'state'),
