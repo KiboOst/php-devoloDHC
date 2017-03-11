@@ -113,12 +113,12 @@ $states = $DHC->getDeviceStates("My Siren");
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 //->fetch the desired state to use it in your script.
 
-//You can also ask one sensor data for any device, like luminosity from a Motion Sensor:
+//You can also ask one sensor data for any device, like luminosity from a Motion Sensor or energy from a Wall Plug:
 $data = $DHC->getDeviceData('MyMotionSensor', 'light');
-echo $data['light']."<br>";
+echo $data['value']."<br>";
 //You can first ask without data, it will return all available sensors datas for this device:
-$data = $DHC->getDeviceData('MyMotionSensor');
-echo "<pre>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>";
+$data = $DHC->getDeviceData('MyWallPlug');
+echo "<pre>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>"; //will echo energy datas, currentvalue, totalvalue and sincetime
 
 //CHANGING OPERATIONS:
 
