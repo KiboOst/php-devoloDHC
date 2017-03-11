@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "2017.3.5";
+	public $_version = "2017.3.6";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -171,6 +171,20 @@ class DevoloDHC {
 		if ( isset($device['error']) ) return $device;
 
 		return $device['batteryLevel'];
+	}
+	
+	public function getDeviceURL($device)
+	{
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( isset($device['error']) ) return $device;
+
+		$uid = $device['uid'];
+		if (!stristr($uid, 'hdm:DevoloHttp:virtual')) return array('error' => 'This is not an http virtual device');
+
+		$hdm = str_replace("hdm:DevoloHttp:virtual", "hs.hdm:DevoloHttp:virtual", $uid);
+		$hdmDatas = $this->fetchItems(array($hdm));
+		$url = $hdmDatas['result']['items'][0]['properties']['httpSettings']['request'];
+		return $url;
 	}
 
 	public function getAllBatteries($lowLevel=100)
