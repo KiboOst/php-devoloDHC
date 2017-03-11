@@ -113,6 +113,13 @@ $states = $DHC->getDeviceStates("My Siren");
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 //->fetch the desired state to use it in your script.
 
+//You can also ask one sensor data for any device, like luminosity from a Motion Sensor:
+$data = $DHC->getDeviceData('MyMotionSensor', 'light');
+echo $data['light']."<br>";
+//You can first ask without data, it will return all available sensors datas for this device:
+$data = $DHC->getDeviceData('MyMotionSensor');
+echo "<pre>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>";
+
 //CHANGING OPERATIONS:
 
 // TURN DEVICE ON(1) or OFF(0):
@@ -141,6 +148,9 @@ echo "<pre>".json_encode($targetValue, JSON_PRETTY_PRINT)."</pre><br>";
 Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 ##Changes
+
+####v2017.3.5 (2017-03-11)
+- New: getDeviceData() directly get a sensor data from a device, like temperature from a Motion Sensor.
 
 ####v2017.3.4 (2017-03-10)
 - New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device like Motion Sensor, etc.
