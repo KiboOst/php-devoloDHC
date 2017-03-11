@@ -7,14 +7,14 @@ This php API allows you to control your Devolo Home Control devices.
 The following devices are currently supported:
 
 - Smart Metering Plug (get/set)
-- Motion Sensor (get)
 - Door/Window Contact (get)
-- Wall Switch (get)
+- Wall Switch (get/set)
 - Siren (get/set)
-- Flood Sensor (get)
-- Humidity Sensor (get)
 - http devices (get/set)
 - Room Thermostat / Radiator Thermostat (get/set)
+- Flood Sensor (get)
+- Humidity Sensor (get)
+- Motion Sensor (get)
 - Scenes (get/set)
 - Timers (get)
 - Rules (get)
@@ -138,6 +138,9 @@ echo $DHC->startScene("We go out")."<br>";
 //CHANGE THERMOSTAT/VALVE VALUE:
 $targetValue = $DHC->setDeviceValue('My thermostat valve', 21);
 echo "<pre>".json_encode($targetValue, JSON_PRETTY_PRINT)."</pre><br>";
+
+//PRESS REMOTE SWITCH KEY:
+$DHC->pressDeviceKey('MySwitch', 3);
 
 ?>
 ```
