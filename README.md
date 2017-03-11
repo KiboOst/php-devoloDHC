@@ -150,10 +150,10 @@ Done with help of source code from https://github.com/kdietrich/node-devolo!
 ##Changes
 
 ####v2017.3.5 (2017-03-11)
-- New: getDeviceData() directly get a sensor data from a device, like temperature from a Motion Sensor.
+- New: getDeviceData() directly get a sensor data from a device, like temperature from a Motion Sensor. Each call to this function get latest datas from the device.
 
 ####v2017.3.4 (2017-03-10)
-- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device like Motion Sensor, etc.
+- New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device like Motion Sensor, etc. Each call to this function get latest datas from the device.
 
 ####v2017.3.3 (2017-03-09)
 - New: getDailyDiary(number_of_events)
@@ -166,7 +166,6 @@ If you pass an int as argument, it will return devices with battery level under 
 ####v2017.3.1 (2017-03-08)
 - New: getDeviceBattery() Note that wire connected device report -1, and virtual devices (http) report None.
 - New: getAllDevices()
-- New: refreshDevice()
 
 ####v2017.3.0 (2017-03-08)
 - Code breaking: all now is in a php class to avoid variable and php session mess with your own script.
