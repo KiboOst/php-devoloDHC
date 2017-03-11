@@ -1,50 +1,8 @@
 <?php
 
 class DevoloDHC {
-	//api stuff:
-	public $_version = "2017.3.41";
-	public $_debug = 0;
-	protected $_Host = 'www.mydevolo.com';
-	protected $_apiVersion = '/v1';
-	protected $_POSTid = 0;
 
-	//user central stuff:
-	protected $_login;
-	protected $_password;
-	protected $_localHost;
-	protected $_uuid;
-	protected $_gateway;
-	protected $_passkey;
-	protected $_sessionID = null; //the one to get first!
-
-	//central stuff stuff(!):
-	public $_AllZones = null;
-	public $_AllDevices = null;
-	public $_AllRules = null;
-	public $_AllTimers = null;
-	public $_AllScenes = null;
-
-	//types stuff:
-	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off operation
-	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send operation
-	protected $_DevicesSendValue = array("MultiLevelSwitch"); //supported devices type for sendValue operation
-	protected $_SensorsNoValues = array("HttpRequest"); //virtual devices
-	protected $_SensorValuesByType = array(
-										'MildewSensor' => array('sensorType', 'state'),
-										'BinarySensor' => array('sensorType', 'state'),
-										'BinarySwitch' => array('switchType', 'state', 'targetState'),
-										'SirenBinarySensor' => array('sensorType', 'state'),
-										'Meter' => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
-										'MultiLevelSensor' => array('sensorType', 'value'),
-										'HumidityBarZone' => array('sensorType', 'value'),
-										'DewpointSensor' => array('sensorType', 'value'),
-										'HumidityBarValue' => array('sensorType', 'value'),
-										'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
-										'SirenMultiLevelSensor' => array('sensorType', 'value'),
-										'LastActivity' => array('lastActivityTime'),
-										'RemoteControl' => array('keyCount', 'keyPressed'),
-										'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
-										);
+	public $_version = "2017.3.5";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -94,7 +52,7 @@ class DevoloDHC {
 		return $infos;
 	}
 
-	//IS
+	//IS:
 	public function isRuleActive($rule)
 	{
 		if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
@@ -144,53 +102,7 @@ class DevoloDHC {
 		return "Unfound OnOff sensor for device";
 	}
 
-	//GET
-	public function getDeviceByName($name)
-	{
-		for($i=0; $i<count($this->_AllDevices); $i++)
-		{
-			$thisDevice = $this->_AllDevices[$i];
-			if ($thisDevice['name'] == $name) return $thisDevice;
-		}
-		return array('error' => 'Unfound device');
-	}
-
-	public function getRuleByName($name)
-	{
-		if (count($this->_AllRules) == 0) $this->getRules();
-
-		for($i=0; $i<count($this->_AllRules); $i++)
-		{
-			$thisRule = $this->_AllRules[$i];
-			if ($thisRule['name'] == $name) return $thisRule;
-		}
-		return array('error' => 'Unfound rule');
-	}
-
-	public function getTimerByName($name)
-	{
-		if (count($this->_AllTimers) == 0) $this->getTimers();
-
-		for($i=0; $i<count($this->_AllTimers); $i++)
-		{
-			$thisTimer = $this->_AllTimers[$i];
-			if ($thisTimer['name'] == $name) return $thisTimer;
-		}
-		return array('error' => 'Unfound timer');
-	}
-
-	public function getSceneByName($name)
-	{
-		if (count($this->_AllScenes) == 0) $this->getScenes();
-
-		for($i=0; $i<count($this->_AllScenes); $i++)
-		{
-			$thisScene = $this->_AllScenes[$i];
-			if ($thisScene['name'] == $name) return $thisScene;
-		}
-		return array('error' => 'Unfound scene');
-	}
-
+	//GET:
 	public function getDeviceStates($device, $DebugReport=null) //return array of sensor type and state
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
@@ -234,22 +146,27 @@ class DevoloDHC {
 		return $arrayStates;
 	}
 
-	public function refreshDevice($device)
+	public function getDeviceData($device, $askData=null) //get device sensor data. If not asked data, return available datas
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
-		$refreshDevice = $this->fetchItems(array($device));
-		for($i=0; $i<count($this->_AllDevices); $i++)
+		$datas = $this->getDeviceStates($device);
+		$itemCount = count($datas);
+		$availableDatas = array();
+		foreach ($datas as $item)
 		{
-			$thisDevice = $this->_AllDevices[$i];
-			if ($thisDevice['uid'] == $device['uid'])
+			array_push($availableDatas, $item['sensorType']);
+			if ($item['sensorType'] == $askData)
 			{
-				$this->_AllDevices[$i] = $thisDevice;
-				return $thisDevice;
+				$data = array_values($item)[1];
+				return array($askData => $data);
 			}
 		}
-		return array('error' => 'Unfound device');
+		$error = array('error' => 'Unfound data for this Device',
+					'available' => $availableDatas
+					);
+		return $error;
 	}
 
 	public function getDeviceBattery($device)
@@ -305,7 +222,7 @@ class DevoloDHC {
 
 	public function getAllDevices() { return $this->_AllDevices; }
 
-	//SET
+	//SET:
 	public function startScene($scene)
 	{
 		if ( is_string($scene) ) $scene = $this->getSceneByName($scene);
@@ -378,6 +295,53 @@ class DevoloDHC {
 	{
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
 		$result = $this->sendCommand($jsonString);
+	}
+
+	//GET shorcuts:
+	public function getDeviceByName($name)
+	{
+		for($i=0; $i<count($this->_AllDevices); $i++)
+		{
+			$thisDevice = $this->_AllDevices[$i];
+			if ($thisDevice['name'] == $name) return $thisDevice;
+		}
+		return array('error' => 'Unfound device');
+	}
+
+	public function getRuleByName($name)
+	{
+		if (count($this->_AllRules) == 0) $this->getRules();
+
+		for($i=0; $i<count($this->_AllRules); $i++)
+		{
+			$thisRule = $this->_AllRules[$i];
+			if ($thisRule['name'] == $name) return $thisRule;
+		}
+		return array('error' => 'Unfound rule');
+	}
+
+	public function getTimerByName($name)
+	{
+		if (count($this->_AllTimers) == 0) $this->getTimers();
+
+		for($i=0; $i<count($this->_AllTimers); $i++)
+		{
+			$thisTimer = $this->_AllTimers[$i];
+			if ($thisTimer['name'] == $name) return $thisTimer;
+		}
+		return array('error' => 'Unfound timer');
+	}
+
+	public function getSceneByName($name)
+	{
+		if (count($this->_AllScenes) == 0) $this->getScenes();
+
+		for($i=0; $i<count($this->_AllScenes); $i++)
+		{
+			$thisScene = $this->_AllScenes[$i];
+			if ($thisScene['name'] == $name) return $thisScene;
+		}
+		return array('error' => 'Unfound scene');
 	}
 
 	//internal functions==================================================
@@ -804,6 +768,49 @@ class DevoloDHC {
 		}
 		if ($this->_debug >= 1) echo "sessionID:".$this->_sessionID."<br>";
 	}
+
+	public $_debug = 0;
+	protected $_Host = 'www.mydevolo.com';
+	protected $_apiVersion = '/v1';
+	protected $_POSTid = 0;
+
+	//user central stuff:
+	protected $_login;
+	protected $_password;
+	protected $_localHost;
+	protected $_uuid;
+	protected $_gateway;
+	protected $_passkey;
+	protected $_sessionID = null; //the one to get first!
+
+	//central stuff stuff(!):
+	public $_AllZones = null;
+	public $_AllDevices = null;
+	public $_AllRules = null;
+	public $_AllTimers = null;
+	public $_AllScenes = null;
+
+	//types stuff:
+	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off operation
+	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send operation
+	protected $_DevicesSendValue = array("MultiLevelSwitch"); //supported devices type for sendValue operation
+	protected $_SensorsNoValues = array("HttpRequest"); //virtual devices
+	protected $_SensorValuesByType = array(
+										'MildewSensor' => array('sensorType', 'state'),
+										'BinarySensor' => array('sensorType', 'state'),
+										'BinarySwitch' => array('switchType', 'state', 'targetState'),
+										'SirenBinarySensor' => array('sensorType', 'state'),
+										'Meter' => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
+										'MultiLevelSensor' => array('sensorType', 'value'),
+										'HumidityBarZone' => array('sensorType', 'value'),
+										'DewpointSensor' => array('sensorType', 'value'),
+										'HumidityBarValue' => array('sensorType', 'value'),
+										'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
+										'SirenMultiLevelSensor' => array('sensorType', 'value'),
+										'LastActivity' => array('lastActivityTime'),
+										'RemoteControl' => array('keyCount', 'keyPressed'),
+										'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
+										);
 
 	protected function init() //sorry, I'm a python guy :-]
 	{
