@@ -145,7 +145,7 @@ class DevoloDHC {
 		}
 		return $arrayStates;
 	}
-
+	
 	public function getDeviceData($device, $askData=null) //get device sensor data. If not asked data, return available datas
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
@@ -157,11 +157,7 @@ class DevoloDHC {
 		foreach ($datas as $item)
 		{
 			array_push($availableDatas, $item['sensorType']);
-			if ($item['sensorType'] == $askData)
-			{
-				$data = array_values($item)[1];
-				return array($askData => $data);
-			}
+			if ($item['sensorType'] == $askData) return $item;
 		}
 		$error = array('error' => 'Unfound data for this Device',
 					'available' => $availableDatas
