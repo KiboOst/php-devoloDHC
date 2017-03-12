@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "2017.3.7";
+	public $_version = "1.0";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -25,15 +25,13 @@ class DevoloDHC {
 					"passkey" => $this->_passkey,
 					"call" => 'new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey)'
 					);
-		return $auth;
+		return array('result'=>$auth);
 	}
 
 	public function getInfos() //return infos from this api and the Devolo central
 	{
-		global $login, $password;
 		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways/'.$this->_gateway;
 		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
-
 		$data = json_decode($data, true);
 
 		$infos = array(
@@ -48,8 +46,7 @@ class DevoloDHC {
 				'firmwareVersion' => $data["firmwareVersion"],
 				'externalAccess' => $data["externalAccess"]
 				);
-
-		return $infos;
+		return array('result'=>$infos);
 	}
 
 	//IS:
@@ -61,7 +58,7 @@ class DevoloDHC {
 		$jsonArray = $this->fetchItems(array($rule["element"]));
 		$state = $jsonArray["result"]["items"][0]["properties"]["enabled"];
 		$state = ($state > 0 ? "active" : "inactive");
-		return $state;
+		return array('result'=>$state);
 	}
 
 	public function isTimerActive($timer)
@@ -78,7 +75,7 @@ class DevoloDHC {
 		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true): null);
-		if ($sensors == null) return "Unfound sensor for device";
+		if ($sensors == null) return array('result'=>null, 'error' => 'Unfound sensor for device');
 
 		for($i=0; $i<count($sensors); $i++)
 		{
@@ -92,12 +89,12 @@ class DevoloDHC {
 				{
 					$state = $sensorDatas["result"]["items"][0]["properties"]["state"];
 					$isOn = ($state > 0 ? "on" : "off");
-					return $isOn;
+					return array('result' => $isOn);
 				}
 				$param = $this->getValuesByType($sensorType);
 			}
 		}
-		return "Unfound OnOff sensor for device";
+		return array('result'=>null, 'error' => 'Unfound OnOff sensor for device');
 	}
 
 	//GET:
@@ -107,7 +104,7 @@ class DevoloDHC {
 		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
-		if ($sensors == null) return array('error' => 'Unfound device');
+		if ($sensors == null) return array('result'=>null, 'error' => 'Unfound device');
 
 		//fetch sensors:
 		$arrayStates = array();
@@ -140,7 +137,7 @@ class DevoloDHC {
 				echo "<pre>infos:".json_encode($sensorDatas, JSON_PRETTY_PRINT)."</pre><br>";
 			}
 		}
-		return $arrayStates;
+		return array('result'=>$arrayStates);
 	}
 
 	public function getDeviceData($device, $askData=null) //get device sensor data. If not asked data, return available datas
@@ -151,12 +148,13 @@ class DevoloDHC {
 		$datas = $this->getDeviceStates($device);
 		$itemCount = count($datas);
 		$availableDatas = array();
-		foreach ($datas as $item)
+		foreach ($datas['result'] as $item)
 		{
 			array_push($availableDatas, $item['sensorType']);
-			if ($item['sensorType'] == $askData) return $item;
+			if ($item['sensorType'] == $askData) return array('result'=>$item);
 		}
-		$error = array('error' => 'Unfound data for this Device',
+		$error = array('result'=>null,
+					'error' => 'Unfound data for this Device',
 					'available' => $availableDatas
 					);
 		return $error;
@@ -168,12 +166,12 @@ class DevoloDHC {
 		if ( isset($device['error']) ) return $device;
 
 		$uid = $device['uid'];
-		if (!stristr($uid, 'hdm:DevoloHttp:virtual')) return array('error' => 'This is not an http virtual device');
+		if (!stristr($uid, 'hdm:DevoloHttp:virtual')) return array('result'=>null, 'error' => 'This is not an http virtual device');
 
 		$hdm = str_replace("hdm:DevoloHttp:virtual", "hs.hdm:DevoloHttp:virtual", $uid);
 		$hdmDatas = $this->fetchItems(array($hdm));
 		$url = $hdmDatas['result']['items'][0]['properties']['httpSettings']['request'];
-		return $url;
+		return array('result'=>$url);
 	}
 
 	public function getDeviceBattery($device)
@@ -181,10 +179,13 @@ class DevoloDHC {
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
-		return $device['batteryLevel'];
+		$batLevel = $device['batteryLevel'];
+		if ($batLevel == "None" or $batLevel == -1) $batLevel = "No battery";
+
+		return array('result'=>$batLevel);
 	}
 
-	public function getAllBatteries($lowLevel=100)
+	public function getAllBatteries($lowLevel=100, $filter=1)
 	{
 		$jsonDatas = array();
 		for($i=0; $i<count($this->_AllDevices); $i++)
@@ -192,12 +193,12 @@ class DevoloDHC {
 			$thisDevice = $this->_AllDevices[$i];
 			$thisDeviceName = $thisDevice['name'] ;
 			$thisBatLevel = $thisDevice['batteryLevel'];
-			if (($thisBatLevel == -1) or ($thisBatLevel == "None")) continue;
+			if (($thisBatLevel == -1) or ($thisBatLevel == "None")) {if ($filter==1) continue; }
 
 			$datas = array("name" => $thisDeviceName, "battery_percent" => $thisBatLevel);
 			if ($thisBatLevel <= $lowLevel) array_push($jsonDatas, $datas);
 		}
-		return $jsonDatas;
+		return array('result'=>$jsonDatas);
 	}
 
 	public function getDailyDiary($numEvents=20)
@@ -224,10 +225,10 @@ class DevoloDHC {
 							);
 			array_push($jsonDatas, $datas);
 		}
-		return $jsonDatas;
+		return array('result'=>$jsonDatas);
 	}
 
-	public function getAllDevices() { return $this->_AllDevices; }
+	public function getAllDevices() { return array('result'=>$this->_AllDevices); }
 
 	//SET:
 	public function startScene($scene)
@@ -238,7 +239,7 @@ class DevoloDHC {
 		$element = $scene['element'];
 		$answer = $this->invokeOperation($element, "start");
 		$result = ( ($answer['result'] == null) ? true : false );
-		return $result;
+		return array('result'=>$result);
 	}
 
 	public function turnDeviceOnOff($device, $state=0)
@@ -247,7 +248,9 @@ class DevoloDHC {
 		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
-		if ($sensors == null) return array('error' => 'No sensor found in this device');
+		if ($sensors == null) return array('result'=>null, 'error' => 'No sensor found in this device');
+
+		if ($state < 0) $state = 0;
 
 		for($i=0; $i<count($sensors); $i++)
 		{
@@ -258,18 +261,24 @@ class DevoloDHC {
 			{
 				$operation = ($state == 0 ? 'turnOff' : 'turnOn');
 				$answer = $this->invokeOperation($sensor, $operation);
-				$result = ( ($answer["result"]['error'] == null) ? true : false );
-				return $result;
+				if (isset($answer['error']["message"]) )
+				{
+					return array('result'=>null, 'error'=>$answer['error']["message"]);
+				}
+				return array('result'=>true);
 			}
 			if (in_array($sensorType, $this->_DevicesSend) and ($state == 1))
 			{
 				$operation = "send";
 				$answer = $this->invokeOperation($sensor, $operation);
-				$result = ( ($answer['error'] == null) ? true : false );
-				return $result;
+				if (isset($answer['error']["message"]) )
+				{
+					return array('result'=>null, 'error'=>$answer['error']["message"]);
+				}
+				return array('result'=>true);
 			}
 		}
-		return array('error' => 'No supported sensor for this device');
+		return array('result'=>null, 'error' => 'No supported sensor for this device');
 	}
 
 	public function setDeviceValue($device, $value)
@@ -278,7 +287,7 @@ class DevoloDHC {
 		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
-		if ($sensors == null) return array('error' => 'No sensor found in this device');
+		if ($sensors == null) return array('result'=>null, 'error' => 'No sensor found in this device');
 
 		for($i=0; $i<count($sensors); $i++)
 		{
@@ -289,21 +298,25 @@ class DevoloDHC {
 			{
 				$operation = 'sendValue';
 				$answer = $this->invokeOperation($sensor, $operation, $value);
-				$result = ( ($answer["result"]['error'] == null) ? true : false );
-				return $result;
+				if (isset($answer['error']["message"]) )
+				{
+					return array('result'=>null, 'error'=>$answer['error']["message"]);
+				}
+				return array('result'=>true);
 			}
 		}
-		return array('error' => 'No supported sensor for this device');
+		return array('result'=>null, 'error' => 'No supported sensor for this device');
 	}
 
 	public function pressDeviceKey($device, $key=null)
 	{
-		if (!isset($key)) return array('error' => 'No key to press');
+		if (!isset($key)) return array('result'=>null, 'error' => 'No key to press');
+		if ($key > 4) return array('result'=>null, 'error' => 'You really have Wall Switch with more than 4 buttons ? Let me know!');
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
 		if ( isset($device['error']) ) return $device;
 
 		$sensors = (isset($device['sensors']) ? json_decode($device['sensors'], true) : null);
-		if ($sensors == null) return array('error' => 'No sensor found in this device');
+		if ($sensors == null) return array('result'=>null, 'error' => 'No sensor found in this device');
 
 		for($i=0; $i<count($sensors); $i++)
 		{
@@ -313,17 +326,21 @@ class DevoloDHC {
 			{
 				$operation = 'pressKey';
 				$answer = $this->invokeOperation($sensor, $operation, $key);
-				$result = ( ($answer["result"]['error'] == null) ? true : false );
-				return $result;
+				if (isset($answer['error']["message"]) )
+				{
+					return array('result'=>null, 'error'=>$answer['error']["message"]);
+				}
+				return array('result'=>true);
 			}
 		}
-		return array('error' => 'No supported sensor for this device');
+		return array('result'=>null, 'error' => 'No supported sensor for this device');
 	}
 
-	public function resetSessionTimeout() //not used, should extend session time on the central.
+	public function resetSessionTimeout() //not allowed acton :-(
 	{
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
 		$result = $this->sendCommand($jsonString);
+		return array('result'=>$result);
 	}
 
 	//GET shorcuts:
@@ -334,7 +351,7 @@ class DevoloDHC {
 			$thisDevice = $this->_AllDevices[$i];
 			if ($thisDevice['name'] == $name) return $thisDevice;
 		}
-		return array('error' => 'Unfound device');
+		return array('result'=>null, 'error' => 'Unfound device');
 	}
 
 	public function getRuleByName($name)
@@ -346,7 +363,7 @@ class DevoloDHC {
 			$thisRule = $this->_AllRules[$i];
 			if ($thisRule['name'] == $name) return $thisRule;
 		}
-		return array('error' => 'Unfound rule');
+		return array('result'=>null, 'error' => 'Unfound rule');
 	}
 
 	public function getTimerByName($name)
@@ -358,7 +375,7 @@ class DevoloDHC {
 			$thisTimer = $this->_AllTimers[$i];
 			if ($thisTimer['name'] == $name) return $thisTimer;
 		}
-		return array('error' => 'Unfound timer');
+		return array('result'=>null, 'error' => 'Unfound timer');
 	}
 
 	public function getSceneByName($name)
@@ -370,7 +387,7 @@ class DevoloDHC {
 			$thisScene = $this->_AllScenes[$i];
 			if ($thisScene['name'] == $name) return $thisScene;
 		}
-		return array('error' => 'Unfound scene');
+		return array('result'=>null, 'error' => 'Unfound scene');
 	}
 
 	//internal functions==================================================
@@ -623,10 +640,8 @@ class DevoloDHC {
 
 
 	//calling functions===================================================
-	protected function _request($protocol, $method, $host, $path, $json, $login, $password, $cookie) //standard function handling all get/post request with curl
+	protected function _request($protocol, $method, $host, $path, $json, $login, $password, $cookie) //standard function handling all get/post request with curl | return string
 	{
-		if ($this->_debug >= 1) echo "<br>";
-
 		$url = $protocol."://".$host.$path;
 
 		$curl = curl_init();
@@ -648,7 +663,6 @@ class DevoloDHC {
 
 		if ( isset($login) and isset($password) )
 		{
-			if ($this->_debug >= 2) echo "DHCrequest with login/password: ".$url."<br>";
 			$auth = $login.":".$password;
 			curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 			curl_setopt($curl, CURLOPT_USERPWD, $auth);
@@ -659,10 +673,7 @@ class DevoloDHC {
 				$json->{'id'}=$this->_POSTid;
 				$this->_POSTid++;
 				$data_string = json_encode($json);
-				if ($this->_debug >= 3) echo 'data_string: '.$data_string."<br>";
 				curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-														'Host: homecontrol.mydevolo.com',
-														'Referer: https://homecontrol.mydevolo.com/root/index.html',
 														'Content-Type: application/json',
 														'Content-Length: '.strlen($data_string))
 													);
@@ -672,9 +683,8 @@ class DevoloDHC {
 
 		if ( isset($cookie) ) //auth ok and get connection cookie, can ask and send stuff to central !!
 		{
-			//$addCookies = 'JSESSIONID='.$cookie.'; GW_ID='.$_SESSION['DHCgateway'].'; FIM_WS_FILTER=(|(GW_ID='.$_SESSION['DHCgateway'].')(!(GW_ID=*)))';
-			$addCookies = 'JSESSIONID='.$cookie;
-			if ($this->_debug >= 2) echo "DHCrequest with cookie ".$url." | ".$addCookies."<br>";
+			$addCookies = 'JSESSIONID='.$cookie.'; GW_ID='.$this->_gateway.'; FIM_WS_FILTER=(|(GW_ID='.$this->_gateway.')(!(GW_ID=*)))';
+			//$addCookies = 'JSESSIONID='.$cookie;
 			curl_setopt($curl, CURLOPT_COOKIE, $addCookies);
 
 			curl_setopt($curl, CURLOPT_HEADER, false);
@@ -688,12 +698,10 @@ class DevoloDHC {
 
 		curl_close($curl);
 
-		if ($this->_debug >= 3) echo "response:".$response."<br>";
-
 		return $response;
 	}
 
-	protected function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc
+	protected function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc | return array
 	{
 		$devicesJson = json_encode($UIDSarray);
 		$json = '{
@@ -707,12 +715,10 @@ class DevoloDHC {
 		$json = json_decode($json);
 		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
 		$jsonArray = json_decode($data, true);
-
-		if ($this->_debug >= 4)  echo "DHC_fetchItems datas:".$data."<br>";
 		return $jsonArray;
 	}
 
-	protected function invokeOperation($sensor, $operation, $value=null) //sensor string, authorized operation string !!
+	protected function invokeOperation($sensor, $operation, $value=null) //sensor string, authorized operation string | return array
 	{
 		$value = '['.$value.']';
 		$jsonString = '{
@@ -722,19 +728,15 @@ class DevoloDHC {
 
 		$json = json_decode($jsonString);
 		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
-		if ($this->_debug >= 4) echo "DHC_invokeOperation $data:".$data."<br>";
-
 		$jsonArray = json_decode($data, true);
 		return $jsonArray;
 	}
 
-	public function sendCommand($jsonString) //directly send json to central. Only works when all required authorisations are set.
+	public function sendCommand($jsonString) //directly send json to central. Only works when all required authorisations are set | return array
 	{
 		$json = json_decode($jsonString);
 		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
 		$jsonArray = json_decode($data, true);
-
-		if ($this->_debug >= 4)  echo "DHC_sendCommand $data:".$data."<br>";
 		return $jsonArray;
 	}
 
@@ -745,7 +747,6 @@ class DevoloDHC {
 		$data = $this->_request('https', 'GET', $this->_Host, $this->_apiVersion.'/users/uuid', null, $this->_login, $this->_password, null);
 		$data = json_decode($data, true);
 		$this->_uuid = $data["uuid"];
-		if ($this->_debug >= 1) echo "uuid:".$this->_uuid."<br>";
 
 		//get gateway:
 		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways';
@@ -753,14 +754,12 @@ class DevoloDHC {
 		$data = json_decode($data, true);
 		$var = explode( "/gateways/", $data["items"][0]["href"] );
 		$this->_gateway = $var[1];
-		if ($this->_debug >= 1) echo "gateway:".$this->_gateway."<br>";
 
 		//get localPasskey:
 		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways/'.$this->_gateway;
 		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
 		$data = json_decode($data, true);
 		$this->_passkey = $data["localPasskey"];
-		if ($this->_debug >= 1) echo "localPasskey:".$this->_passkey."<br>";
 	}
 
 	protected function getSessionID() //get and set cookie for later authorized requests
@@ -779,8 +778,6 @@ class DevoloDHC {
 		{
 			die("Couldn't find Devolo Central Token in response request.");
 		}
-		if ($this->_debug >= 1) echo "token:".$token."<br>";
-
 
 		$path = '/dhlp/portal/light/?token='.$token;
 		$data = $this->_request('http', 'GET', $this->_localHost, $path, null, $this->_uuid, $this->_passkey, null);
@@ -794,10 +791,8 @@ class DevoloDHC {
 		{
 			die("Couldn't find sessionID from response request.");
 		}
-		if ($this->_debug >= 1) echo "sessionID:".$this->_sessionID."<br>";
 	}
 
-	public $_debug = 0;
 	protected $_Host = 'www.mydevolo.com';
 	protected $_apiVersion = '/v1';
 	protected $_POSTid = 0;
@@ -809,7 +804,7 @@ class DevoloDHC {
 	protected $_uuid;
 	protected $_gateway;
 	protected $_passkey;
-	protected $_sessionID = null; //the one to get first!
+	public $_sessionID; //the one to get first!
 
 	//central stuff stuff(!):
 	public $_AllZones = null;
@@ -819,9 +814,9 @@ class DevoloDHC {
 	public $_AllScenes = null;
 
 	//types stuff:
-	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor", "SirenBinarySensor"); //supported devices type for on/off operation
+	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor"); //supported devices type for on/off operation
 	protected $_DevicesSend = array("HttpRequest"); //supported devices type for send operation
-	protected $_DevicesSendValue = array("MultiLevelSwitch"); //supported devices type for sendValue operation
+	protected $_DevicesSendValue = array("MultiLevelSwitch", "SirenMultiLevelSwitch"); //supported devices type for sendValue operation
 	protected $_DevicesPressKey = array("RemoteControl"); //supported devices type for pressKey operation
 	protected $_SensorsNoValues = array("HttpRequest"); //virtual devices
 	protected $_SensorValuesByType = array(
@@ -844,22 +839,15 @@ class DevoloDHC {
 	protected function init() //sorry, I'm a python guy :-]
 	{
 		//get sessionID on local Devolo Home Control unit:
-		if ( isset($this->_uuid) and isset($this->_gateway) and isset($this->_passkey) )
+		if ( !isset($this->_uuid) or !isset($this->_gateway) or !isset($this->_passkey) )
 		{
-			if ($this->_debug >= 2) echo "getSessionID()"."<br>";
-			$this->getSessionID();
+			$this->initAuth();
 		}
 		else
 		{
-			if ($this->_debug >= 2) echo "initAuth()"."<br>";
-			$this->initAuth();
-
-			if ($this->_debug >= 2) echo "getSessionID()"."<br>";
 			$this->getSessionID();
 		}
-
 		$this->getDevices();
-		return true;
 	}
 
 //DevoloDHC end
