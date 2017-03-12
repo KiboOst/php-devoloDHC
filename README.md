@@ -24,136 +24,140 @@ Changing settings will appear in Devolo web interface / Apps daily diary with yo
 Feel free to submit an issue or pull request to add more.
 
 **This isn't an official API | USE AT YOUR OWN RISK!**
-_Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allow._
+Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allow._
 
 ##Requirements
 - PHP5+
 - cURL
 
-You can use this API on your lan (easyphp, Synology DSM, etc), but at least first time the api will need external access to gather authortization stuff from www.mydevolo.com.
-Can be installed on your external domain, but the api need access to your Devolo Home Control box. Can be done throw NAT/PAT with a dyndns. In this case, specify the url as $localIP.
+You can use this API on your lan (easyphp, Synology DSM, etc), but at least first time the API will need internet access to gather authorization stuff from www.mydevolo.com.
+
+You can use this API in php scripts on your internet domain, but the API need access to your Devolo Home Control box. This can be done with NAT/PAT rule, with a dyndns. In this case, specify the url as $localIP.
 
 
 ##How-to
-- Get class/phpDevoloAPI.php and put it on your server
+- Download class/phpDevoloAPI.php and put it on your server.
 - Include phpDevoloAPI.php in your script.
 - That's all!
 
 First time execution:
-The api will first request some authorization data from www.mydevolo.com.
+The API will first request some authorization data from www.mydevolo.com.
 These data won't change for same user, so you can get them and directly pass them next time to get faster connection.
-Note them in your script or in a config file you include before creating DevoloDHC().
 
-```
-<?php
+```php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
 $DHC = new DevoloDHC($login, $password, $localIP);
 $auth = $DHC->getAuth();
 echo "<pre>".json_encode($auth, JSON_PRETTY_PRINT)."</pre><br>";
-?>
 ```
 
 So note return values and next time, call $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
 
-```
-<?php
+```php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
 $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
-?>
 ```
 
 Let the fun begin:
 
-```
-<?php
+```php
 //get some infos on your Devolo Home Control box:
 echo "__infos__<br>";
 $infos = $DHC->getInfos();
-echo "<pre>".json_encode($infos, JSON_PRETTY_PRINT)."</pre><br>";
+echo "<pre>".json_encode($infos['result'], JSON_PRETTY_PRINT)."</pre><br>";
+```
 
-//for devices, rules, scenes, timers, you can call state or action by object or directly by name
+For devices, rules, scenes, timers, you can call state or action by object or directly by name.
 
-//READING OPERATIONS:
+READING OPERATIONS (change devices names by yours!):
 
-//Will return 'active' or 'inactive' string:
-echo $DHC->isRuleActive("MyRule-in-DHC")."<br>";
-echo $DHC->isTimerActive("MyTimer-in-DHC")."<br>";
+```php
+$state = $DHC->isRuleActive("MyRule");
+echo "Rule state:".$state['result']."<br>";
+$state = $DHC->isTimerActive("MyTimer");
+echo "Timer state:".$state['result']."<br>";
 
-//Check if a device is on (return 'on' or 'off' string)
-echo "is on? ".$DHC->isDeviceOn("My Room wallPlug")."<br>";
+//Check if a device is on (0=off, 1=on)
+$state = $DHC->isDeviceOn("My Wall Plug");
+echo "Device state:".$state['result']."<br>";
 
 //check a device battery level:
-$batteryLevel = $DHC->getDeviceBattery('my wall switch 1');
-echo "batteryLevel:".$batteryLevel."<br>";
-
-//or:
-$AllDevices = $DHC->getAllDevices();
-foreach ($AllDevices as $device)
-{
-	echo "Device:".$device['name']." : ".$device['batteryLevel']."<br>";
-}
+$batteryLevel = $DHC->getDeviceBattery('My Motion Sensor');
+echo "BatteryLevel:".$batteryLevel['result']."<br>";
 
 //get all battery level under 20% (ommit argument to have all batteries levels):
-$AllBatteries = $DHC->getAllBatteries(20);
-echo "AllBatteries:<pre>".json_encode($AllBatteries, JSON_PRETTY_PRINT)."</pre><br>";
+$BatLevels = $DHC->getAllBatteries(20);
+echo "<pre>Batteries Levels:<br>".json_encode($BatLevels['result'], JSON_PRETTY_PRINT)."</pre><br>";
 
 //get daily diary, last number of events:
 $diary = $DHC->getDailyDiary(10);
-echo "<pre>diary:".json_encode($diary, JSON_PRETTY_PRINT)."</pre><br>";
+echo "<pre>diary:<br>".json_encode($diary['result'], JSON_PRETTY_PRINT)."</pre><br>";
 
 //Get all sensors states from all device in your central (can be slow!):
 $AllDevices = $DHC->getAllDevices();
-foreach ($AllDevices as $device) {
-	$states = $DHC->getDeviceStates($device);
-	echo "<pre>states ".$device['name'].":".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";  //DEBUGGGGGGGGGGG
+foreach ($AllDevices['result'] as $device) {
+    $states = $DHC->getDeviceStates($device);
+    echo "<pre>states:<br>".$device['name'].":".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 }
 
 //Or get one device states:
-$states = $DHC->getDeviceStates("My Siren");
+$states = $DHC->getDeviceStates('My Motion Sensor');
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
-//->fetch the desired state to use it in your script.
 
-//get url from http device: (return url string or {"error": "This is not an http virtual device"}
-$url= $DHC->getDeviceURL('myhttp device');
+//get url from http device:
+$url = $DHC->getDeviceURL('myhttp device');
 
 //You can also ask one sensor data for any device, like luminosity from a Motion Sensor or energy from a Wall Plug:
-$data = $DHC->getDeviceData('MyMotionSensor', 'light');
-echo $data['value']."<br>";
+$data = $DHC->getDeviceData('My Motion Sensor', 'light');
+echo "MyMotionSensor luminosity: ".$data['result']['value']."<br>";
+
 //You can first ask without data, it will return all available sensors datas for this device:
-$data = $DHC->getDeviceData('MyWallPlug');
-echo "<pre>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>"; //will echo energy datas, currentvalue, totalvalue and sincetime
+//will echo energy datas, currentvalue, totalvalue and sincetime
+$data = $DHC->getDeviceData('My Wall Plug');
+echo "<pre>MyWallPlug available states:<br>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>";
+```
 
-//CHANGING OPERATIONS:
+CHANGING OPERATIONS (change devices names by yours!):
 
-// TURN DEVICE ON(1) or OFF(0):
+```php
+//TURN DEVICE ON(1) or OFF(0):
 //supported: all on/off devices and http devices
-echo "TurnOn:".$DHC->turnDeviceOnOff("My Room wallPlug", 1)."<br>";
+$DHC->turnDeviceOnOff("My Room wallPlug", 1);
 
 //RUN HTTP DEVICE:
-$result = $DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course. 
+$DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course.
 
-// START SCENE:
-echo $DHC->startScene("We go out")."<br>";
+//START SCENE:
+$DHC->startScene("We go out");
 
 //CHANGE THERMOSTAT/VALVE VALUE:
 $targetValue = $DHC->setDeviceValue('My thermostat valve', 21);
-echo "<pre>".json_encode($targetValue, JSON_PRETTY_PRINT)."</pre><br>";
+echo "<pre>".json_encode($targetValue['result'], JSON_PRETTY_PRINT)."</pre><br>";
+
+//TURN SIREN ON: (last number is the indice of the tone in the interface list. For example, 1 is alarm and won't stop! 0 will!)
+$DHC->setDeviceValue('My Devolo Siren', 5);
 
 //PRESS REMOTE SWITCH KEY:
 $DHC->pressDeviceKey('MySwitch', 3);
-
-?>
 ```
 
 ##TODO
 
-- Waiting Devolo flush modules to integrate them (shutter, relay, dimmer). Relay, Dimmer and Shutter are in the central firmware yet, but will have to get some to fully support it (last availability is March/April 2017).
+- Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
+Relay, Dimmer and Shutter are in the central firmware yet (v8.0.45_2016-11-17), but will have to get some to fully support it (last availability is March/April 2017).
+I also highly guess the central will need a firmware update to fully support them...
 
 ##Credits
 
 Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 ##Changes
+
+####v 1.0 (2017-03-12)
+- Changed: For convenience, all functions now return an array with datas in array['result'].
+If there is an error, message is in array['error'] and result is null. So you can easily check for error first.
+- Fix: $DHC->setDeviceValue('MyDevoloSiren', 1) now works (1 is the indice of the tone in the interface list).
+- Fix: Lot more error handling.
 
 ####v2017.3.5 (2017-03-11)
 - New: getDeviceData() directly get a sensor data from a device, like temperature from a Motion Sensor. Each call to this function get latest datas from the device.
