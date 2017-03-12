@@ -843,10 +843,7 @@ class DevoloDHC {
 		{
 			$this->initAuth();
 		}
-		else
-		{
-			$this->getSessionID();
-		}
+		$this->getSessionID();
 		$this->getDevices();
 	}
 
