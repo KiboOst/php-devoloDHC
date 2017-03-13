@@ -93,6 +93,10 @@ echo "<pre>Batteries Levels:<br>".json_encode($BatLevels['result'], JSON_PRETTY_
 $diary = $DHC->getDailyDiary(10);
 echo "<pre>diary:<br>".json_encode($diary['result'], JSON_PRETTY_PRINT)."</pre><br>";
 
+//get daily device stat:
+//0:today, 1:yesterday, 2:day before yesterday
+$stats = getDailyStat('My MotionSensor', 0)
+
 //Get all sensors states from all device in your central (can be slow!):
 $AllDevices = $DHC->getAllDevices();
 foreach ($AllDevices['result'] as $device) {
@@ -141,6 +145,22 @@ $DHC->setDeviceValue('My Devolo Siren', 5);
 $DHC->pressDeviceKey('MySwitch', 3);
 ```
 
+Some people would like to have more than 3days consumption log for devices like Wall Plugs.
+Here are two functions to log consumptions, and read them between two dates of choice. So you can make a cron task to call this function everyday, it will log the yesterday total consumption of each Wall Plugs:
+
+```php
+$DHC->logConsumption('log.json');
+```
+If you don't provide a file path, or it can't write to, the api will return an error, but also provide the result (so you can write your own custom functions).
+
+Then, to read the log and know consumption for a month, or along summer/winter etc:
+
+```php
+$stats = $DHC->getLogConsumption('log.json', '01.03.2017', '31.03.2017');
+echo "<pre>".json_encode($stats, JSON_PRETTY_PRINT)."</pre><br>";
+```
+Of course, it needs a valid previously saved log file by the api. You can provide no dates (full log), or only one (set first as null if needed). Just respect day.month.year (php 'd.m.Y').
+
 ##TODO
 
 - Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
@@ -152,6 +172,11 @@ I also highly guess the central will need a firmware update to fully support the
 Done with help of source code from https://github.com/kdietrich/node-devolo!
 
 ##Changes
+
+####v 1.1 (2017-03-13)
+- New: getDailyStat()
+- New: logConsumption() and getLogConsumption()
+- More error handling in provided arguments
 
 ####v 1.0 (2017-03-12)
 - Changed: For convenience, all functions now return an array with datas in array['result'].
