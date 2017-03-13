@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "1.0";
+	public $_version = "1.1";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -55,8 +55,9 @@ class DevoloDHC {
 		if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
 		if ( isset($rule['error']) ) return $rule;
 
-		$jsonArray = $this->fetchItems(array($rule["element"]));
-		$state = $jsonArray["result"]["items"][0]["properties"]["enabled"];
+		$answer = $this->fetchItems(array($rule["element"]));
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		$state = $answer["result"]["items"][0]["properties"]["enabled"];
 		$state = ($state > 0 ? "active" : "inactive");
 		return array('result'=>$state);
 	}
@@ -84,10 +85,11 @@ class DevoloDHC {
 
 			if (in_array($sensorType, $this->_DevicesOnOff))
 			{
-				$sensorDatas = $this->fetchItems(array($sensor));
-				if ( isset($sensorDatas["result"]["items"][0]["properties"]["state"]) )
+				$answer = $this->fetchItems(array($sensor));
+				if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+				if ( isset($answer["result"]["items"][0]["properties"]["state"]) )
 				{
-					$state = $sensorDatas["result"]["items"][0]["properties"]["state"];
+					$state = $answer["result"]["items"][0]["properties"]["state"];
 					$isOn = ($state > 0 ? "on" : "off");
 					return array('result' => $isOn);
 				}
@@ -116,12 +118,13 @@ class DevoloDHC {
 			$param = $this->getValuesByType($sensorType);
 			if ($param != null)
 			{
-				$sensorDatas = $this->fetchItems(array($sensor));
-				if ($DebugReport == true) echo "<br><pre>".json_encode($sensorDatas, JSON_PRETTY_PRINT)."</pre><br>";
+				$answer = $this->fetchItems(array($sensor));
+				if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+				if ($DebugReport == true) echo "<br><pre>".json_encode($answer, JSON_PRETTY_PRINT)."</pre><br>";
 				$jsonSensor = array('sensorType' => $sensorType);
 				foreach ($param as $key)
 				{
-					$value = $sensorDatas["result"]["items"][0]["properties"][$key];
+					$value = $answer["result"]["items"][0]["properties"][$key];
 					//Seems Devolo doesn't know all about its own motion sensor...
 					if ($key=="sensorType" and $value=="unknown") continue;
 					//echo "sensorType:".$sensorType.", key:".$key.", value:".$value."<br>";
@@ -132,9 +135,9 @@ class DevoloDHC {
 			}
 			elseif( !in_array($sensorType, $this->_SensorsNoValues) ) //Unknown, unsupported sensor!
 			{
-				$sensorDatas = $this->fetchItems(array($sensor));
+				$answer = $this->fetchItems(array($sensor));
 				echo "DEBUG - UNKNOWN PARAM - Please help and report this message on https://github.com/KiboOst/php-devoloDHC or email it to".base64_decode('a2lib29zdEBmcmVlLmZy')." <br>";
-				echo "<pre>infos:".json_encode($sensorDatas, JSON_PRETTY_PRINT)."</pre><br>";
+				echo "<pre>infos:".json_encode($answer, JSON_PRETTY_PRINT)."</pre><br>";
 			}
 		}
 		return array('result'=>$arrayStates);
@@ -169,8 +172,9 @@ class DevoloDHC {
 		if (!stristr($uid, 'hdm:DevoloHttp:virtual')) return array('result'=>null, 'error' => 'This is not an http virtual device');
 
 		$hdm = str_replace("hdm:DevoloHttp:virtual", "hs.hdm:DevoloHttp:virtual", $uid);
-		$hdmDatas = $this->fetchItems(array($hdm));
-		$url = $hdmDatas['result']['items'][0]['properties']['httpSettings']['request'];
+		$answer = $this->fetchItems(array($hdm));
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		$url = $answer['result']['items'][0]['properties']['httpSettings']['request'];
 		return array('result'=>$url);
 	}
 
@@ -203,14 +207,18 @@ class DevoloDHC {
 
 	public function getDailyDiary($numEvents=20)
 	{
+		if (!is_int($numEvents)) return array('error'=> 'Provide numeric argument as number of events to report');
+		if ($numEvents < 0) return array('error'=> 'Dude, what should I report as negative number of events ? Are you in the future ?');
+
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["devolo.DeviceEvents","retrieveDailyData",[0,0,'.$numEvents.']]}';
-		$result = $this->sendCommand($jsonString);
+		$answer = $this->sendCommand($jsonString);
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 
 		$jsonDatas = array();
-		$numEvents = count($result['result']); //may have less than requested
+		$numEvents = count($answer['result']); //may have less than requested
 		for($i=$numEvents-1; $i>=1; $i--) //put recent on top
 		{
-			$event = $result['result'][$i];
+			$event = $answer['result'][$i];
 			$deviceName = $event['deviceName'];
 			$deviceZone = $event['deviceZone'];
 			$author = $event['author'];
@@ -228,6 +236,129 @@ class DevoloDHC {
 		return array('result'=>$jsonDatas);
 	}
 
+	public function getDailyStat($device, $dayBefore)
+	{
+		if ( is_string($device) ) $device = $this->getDeviceByName($device);
+		if ( isset($device['error']) ) return $device;
+
+		if (!is_int($dayBefore)) return array('error'=> 'second argument should be 0 1 or 2 for today, yesterday, day before yesterday');
+
+		$operation = "retrieveDailyStatistics";
+		$sensor = "st.".$device['uid'];
+		$answer = $this->invokeOperation($sensor, $operation, $dayBefore);
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+
+		$jsonDatas = array();
+		$numItems = count($answer['result']);
+		for($i=0; $i<$numItems; $i++)
+		{
+			$sensor = $answer['result'][$i]['widgetElementUID'];
+			$values = $answer['result'][$i]['value'];
+			$timesOfDay = $answer['result'][$i]['timeOfDay'];
+
+			if (strpos($device['model'], 'Door/Window:Sensor'))
+			{
+				if (strpos($sensor, 'BinarySensor:hdm') !== false) $sensor = 'opened';
+				if (strpos($sensor, '#MultilevelSensor(1)') !== false) $sensor = 'temperature';
+				if (strpos($sensor, '#MultilevelSensor(3)') !== false) $sensor = 'light';
+			}
+			if (strpos($device['model'], 'Motion:Sensor'))
+			{
+				if (strpos($sensor, 'BinarySensor:hdm') !== false) $sensor = 'alarm';
+				if (strpos($sensor, '#MultilevelSensor(1)') !== false) $sensor = 'temperature';
+				if (strpos($sensor, '#MultilevelSensor(3)') !== false) $sensor = 'light';
+			}
+			if (strpos($device['model'], 'Wall:Plug:Switch:and:Meter'))
+			{
+				if (strpos($sensor, 'Meter:hdm') !== false) $sensor = 'consumption';
+			}
+
+			$sensorData = array('sensor'=>$sensor);
+
+			for($j=count($values)-1; $j>=1; $j--) //put recent on top
+			{
+				$value = $values[$j];
+				$timeOfDay = $timesOfDay[$j]; //set it readable!
+				$timeOfDay = gmdate("H:i:s", $timeOfDay);
+				$datas = array($timeOfDay=>$value);
+				$sensorData[$timeOfDay] = $value;
+			}
+			array_push($jsonDatas, $sensorData);
+		}
+		return array('result'=>$jsonDatas);
+	}
+
+	public function logConsumption($filePath='/')
+	{
+		if (file_exists($filePath))
+		{
+			$prevDatas = json_decode(file_get_contents($filePath), true);
+		}
+		else
+		{
+			$prevDatas = array();
+		}
+
+		//get yesterday sums for each device:
+		$yesterday = date('d.m.Y',strtotime("-1 days"));
+		$datasArray = array();
+		foreach ($this->_AllDevices as $device)
+		{
+			if (strpos($device['model'], 'Wall:Plug:Switch:and:Meter'))
+			{
+				$name = $device['name'];
+				$datas = $this->getDailyStat($device, 1);
+				$sum = array_sum($datas['result'][0])/1000;
+				$sum = $sum.'kWh';
+				$datasArray[$yesterday][$name] = $sum;
+			}
+		}
+
+		//add yesterday sums to previously loaded datas:
+		$prevDatas[$yesterday] = $datasArray[$yesterday];
+		$put = file_put_contents($filePath, json_encode($prevDatas, JSON_PRETTY_PRINT));
+		if ($put) return array('result'=>$datasArray);
+		return array('result'=>$datasArray, 'error'=>'Unable to write file!');
+	}
+
+	public function getLogConsumption($filePath, $dateStart=null, $dateEnd=null)
+	{
+		if (file_exists($filePath))
+		{
+			$prevDatas = json_decode(file_get_contents($filePath), true);
+			$keys = array_keys($prevDatas);
+			$logDateStart = $keys[0];
+			$logDateEnd = $keys[count($prevDatas)-1];
+
+			if (!isset($dateStart)) $dateStart = $logDateStart;
+			if (!isset($dateEnd)) $dateEnd = $logDateEnd;
+
+			$sumArray = array();
+			for($i=0; $i<count($prevDatas); $i++)
+			{
+				$thisDate = $keys[$i];
+				$data = $prevDatas[$thisDate];
+				if ( strtotime($thisDate)<=strtotime($dateEnd) and strtotime($thisDate)>=strtotime($dateStart))
+				{
+					foreach ($data as $name => $value)
+					{
+						if (!isset($sumArray[$name])) $sumArray[$name] = 0;
+						$sumArray[$name] += $value;
+					}
+				}
+			}
+			foreach ($sumArray as $name => $value)
+			{
+				$sumArray[$name] = $value.'kWh';
+			}
+			return array('result'=>$sumArray);
+		}
+		else
+		{
+			return array('result'=>null, 'error'=>'Unable to open file!');
+		}
+	}
+
 	public function getAllDevices() { return array('result'=>$this->_AllDevices); }
 
 	//SET:
@@ -238,6 +369,7 @@ class DevoloDHC {
 
 		$element = $scene['element'];
 		$answer = $this->invokeOperation($element, "start");
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 		$result = ( ($answer['result'] == null) ? true : false );
 		return array('result'=>$result);
 	}
@@ -261,20 +393,14 @@ class DevoloDHC {
 			{
 				$operation = ($state == 0 ? 'turnOff' : 'turnOn');
 				$answer = $this->invokeOperation($sensor, $operation);
-				if (isset($answer['error']["message"]) )
-				{
-					return array('result'=>null, 'error'=>$answer['error']["message"]);
-				}
+				if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 				return array('result'=>true);
 			}
 			if (in_array($sensorType, $this->_DevicesSend) and ($state == 1))
 			{
 				$operation = "send";
 				$answer = $this->invokeOperation($sensor, $operation);
-				if (isset($answer['error']["message"]) )
-				{
-					return array('result'=>null, 'error'=>$answer['error']["message"]);
-				}
+				if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 				return array('result'=>true);
 			}
 		}
@@ -298,10 +424,7 @@ class DevoloDHC {
 			{
 				$operation = 'sendValue';
 				$answer = $this->invokeOperation($sensor, $operation, $value);
-				if (isset($answer['error']["message"]) )
-				{
-					return array('result'=>null, 'error'=>$answer['error']["message"]);
-				}
+				if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 				return array('result'=>true);
 			}
 		}
@@ -326,10 +449,7 @@ class DevoloDHC {
 			{
 				$operation = 'pressKey';
 				$answer = $this->invokeOperation($sensor, $operation, $key);
-				if (isset($answer['error']["message"]) )
-				{
-					return array('result'=>null, 'error'=>$answer['error']["message"]);
-				}
+				if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 				return array('result'=>true);
 			}
 		}
@@ -339,8 +459,9 @@ class DevoloDHC {
 	public function resetSessionTimeout() //not allowed acton :-(
 	{
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
-		$result = $this->sendCommand($jsonString);
-		return array('result'=>$result);
+		$answer = $this->sendCommand($jsonString);
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		return array('result'=>$answer['result']);
 	}
 
 	//GET shorcuts:
@@ -843,7 +964,10 @@ class DevoloDHC {
 		{
 			$this->initAuth();
 		}
-		$this->getSessionID();
+		else
+		{
+			$this->getSessionID();
+		}
 		$this->getDevices();
 	}
 
