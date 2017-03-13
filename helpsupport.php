@@ -15,8 +15,10 @@ Thanks for your support!
 error_reporting(E_ALL);
 ini_set('display_errors', true);
 
-require($_SERVER['DOCUMENT_ROOT']."/path/to/config.php");
+
 //get your login/pass/localIP (you can provide uuid/gateway/passkey as usual)
+require($_SERVER['DOCUMENT_ROOT']."/path/to/config.php");
+require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
 $DHC = new DevoloDHC($login, $password, $localIP);
 
 //print all devices datas:
@@ -24,11 +26,8 @@ $AllDevices = $DHC->getAllDevices();
 echo "AllDevices:<pre>".json_encode($AllDevices, JSON_PRETTY_PRINT)."</pre><br>";
 
 //report all sensors states from all device in your central (can be slow!):
-$AllDevices = $DHC->getAllDevices();
 foreach ($AllDevices as $device) {
     $DHC->getDeviceStates($device, true); //true argument will tell to display entire report from sensors
 }
-
-
 
 ?>
