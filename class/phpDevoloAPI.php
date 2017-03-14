@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "1.1";
+	public $_version = "1.2";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -407,6 +407,20 @@ class DevoloDHC {
 		return array('result'=>null, 'error' => 'No supported sensor for this device');
 	}
 
+	public function turnGroupOnOff($group, $state=0)
+	{
+		if ( is_string($group) ) $group = $this->getGroupByName($group);
+		if ( isset($group['error']) ) return $group;
+
+		$sensor = 'devolo.BinarySwitch:'.$group['id'];
+		if ($state < 0) $state = 0;
+
+		$operation = ($state == 0 ? 'turnOff' : 'turnOn');
+		$answer = $this->invokeOperation($sensor, $operation);
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		return array('result'=>true);
+	}
+
 	public function setDeviceValue($device, $value)
 	{
 		if ( is_string($device) ) $device = $this->getDeviceByName($device);
@@ -511,6 +525,16 @@ class DevoloDHC {
 		return array('result'=>null, 'error' => 'Unfound scene');
 	}
 
+	public function getGroupByName($name)
+	{
+		for($i=0; $i<count($this->_AllGroups); $i++)
+		{
+			$thisGroup = $this->_AllGroups[$i];
+			if ($thisGroup['name'] == $name) return $thisGroup;
+		}
+		return array('result'=>null, 'error' => 'Unfound group');
+	}
+
 	//internal functions==================================================
 	protected function getDevices()
 	{
@@ -552,9 +576,10 @@ class DevoloDHC {
 		$this->_AllDevices = $devices;
 	}
 
-	protected function getZones()
+	protected function getZones() //also get groups!
 	{
 		$this->_AllZones = array();
+		$this->_AllGroups = array();
 
 		$json = '{
 			"jsonrpc":"2.0",
@@ -568,20 +593,46 @@ class DevoloDHC {
 
 		$jsonArray = json_decode($data, true);
 
-		$zonesNum = count($jsonArray['result']["items"][0]['properties']['zones']);
+		//get all zones:
 
+		$zones = $jsonArray['result']["items"][0]['properties']['zones'];
+		$zonesNum = count($zones);
 		for($i=0; $i<$zonesNum; $i++)
 		{
-			$thisZone = $jsonArray['result']["items"][0]['properties']['zones'];
-			$thisID = $thisZone[$i]["id"];
-			$thisName = $thisZone[$i]["name"];
-			$thisDevices = $thisZone[$i]["deviceUIDs"];
+			$thisID = $zones[$i]["id"];
+			$thisName = $zones[$i]["name"];
+			$thisDevices = $zones[$i]["deviceUIDs"];
 
 			$zone = array("name" => $thisName,
 							"id" => $thisID,
 							"deviceUIDs" => $thisDevices
 							);
 			array_push($this->_AllZones, $zone);
+		}
+
+		//get all groups:
+		$groups = $jsonArray['result']["items"][0]['properties']['smartGroupWidgetUIDs'];
+		$groupsNum = count($groups);
+		//get each group infos:
+		$jsonArray = $this->fetchItems($groups);
+
+		$groups = $jsonArray['result']["items"];
+		for($i=0; $i<$groupsNum; $i++)
+		{
+			$thisGroup = $groups[$i];
+			$thisID = $thisGroup["UID"];
+			$thisName = $thisGroup['properties']["itemName"];
+			$thisOurOfSync = $thisGroup['properties']["outOfSync"];
+			$thisSync = $thisGroup['properties']["synchronized"];
+			$thisDevices = $thisGroup['properties']["deviceUIDs"];
+
+			$group = array("name" => $thisName,
+							"id" => $thisID,
+							"outOfSync" => $thisOurOfSync,
+							"synchronized" => $thisSync,
+							"deviceUIDs" => $thisDevices
+							);
+			array_push($this->_AllGroups, $group);
 		}
 	}
 
@@ -928,6 +979,7 @@ class DevoloDHC {
 	public $_sessionID; //the one to get first!
 
 	//central stuff stuff(!):
+	public $_AllGroups = null;
 	public $_AllZones = null;
 	public $_AllDevices = null;
 	public $_AllRules = null;
