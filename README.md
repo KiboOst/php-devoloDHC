@@ -16,6 +16,7 @@ The following devices are currently supported:
 - Motion Sensor (get)
 - Door/Window Contact (get)
 - Scenes (get/set)
+- Groups (get/set)
 - Timers (get)
 - Rules (get)
 
@@ -134,6 +135,9 @@ $DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course.
 //START SCENE:
 $DHC->startScene("We go out");
 
+//TURN GROUP ON(1) or OFF(0):
+$DHC->turnGroupOnOff("My Plugs Group", 1);
+
 //CHANGE THERMOSTAT/VALVE VALUE:
 $targetValue = $DHC->setDeviceValue('My thermostat valve', 21);
 echo "<pre>".json_encode($targetValue['result'], JSON_PRETTY_PRINT)."</pre><br>";
@@ -172,6 +176,9 @@ I also highly guess the central will need a firmware update to fully support the
 Thanks to [@kdietrich](https://github.com/kdietrich) for reverse engineering of Devolo authentification.
 
 ##Changes
+
+####v 1.2 (2017-03-14)
+- New: turnGroupOnOff() / Feature requested by API user.
 
 ####v 1.1 (2017-03-13)
 - New: getDailyStat()
