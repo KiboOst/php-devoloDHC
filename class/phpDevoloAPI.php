@@ -959,15 +959,11 @@ class DevoloDHC {
 
 	protected function init() //sorry, I'm a python guy :-]
 	{
-		//get sessionID on local Devolo Home Control unit:
 		if ( !isset($this->_uuid) or !isset($this->_gateway) or !isset($this->_passkey) )
 		{
 			$this->initAuth();
 		}
-		else
-		{
-			$this->getSessionID();
-		}
+		$this->getSessionID();
 		$this->getDevices();
 	}
 
