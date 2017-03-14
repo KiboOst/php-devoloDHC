@@ -1,6 +1,6 @@
-#php-devoloDHC
+# php-devoloDHC
 
-##php API for Devolo Home Control
+## php API for Devolo Home Control
 (C) 2017, KiboOst
 
 This php API allows you to control your Devolo Home Control devices.
@@ -27,7 +27,7 @@ Feel free to submit an issue or pull request to add more.
 **This isn't an official API | USE AT YOUR OWN RISK!**
 Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allow._
 
-##Requirements
+## Requirements
 - PHP5+
 - cURL
 
@@ -36,7 +36,7 @@ You can use this API on your lan (easyphp, Synology DSM, etc), but at least firs
 You can use this API in php scripts on your internet domain, but the API need access to your Devolo Home Control box. This can be done with NAT/PAT rule, with a dyndns. In this case, specify the url as $localIP.
 
 
-##How-to
+## How-to
 - Download class/phpDevoloAPI.php and put it on your server.
 - Include phpDevoloAPI.php in your script.
 - That's all!
@@ -165,62 +165,62 @@ echo "<pre>".json_encode($stats, JSON_PRETTY_PRINT)."</pre><br>";
 ```
 Of course, it needs a valid previously saved log file by the api. You can provide no dates (full log), or only one (set first as null if needed). Just respect day.month.year (php 'd.m.Y').
 
-##TODO
+## TODO
 
 - Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
 Relay, Dimmer and Shutter are in the central firmware yet (v8.0.45_2016-11-17), but will have to get some to fully support it (last availability is March/April 2017).
 I also highly guess the central will need a firmware update to fully support them...
 
-##Credits
+## Credits
 
 Thanks to [@kdietrich](https://github.com/kdietrich) for reverse engineering of Devolo authentification.
 
-##Changes
+## Changes
 
-####v 1.2 (2017-03-14)
+#### v 1.2 (2017-03-14)
 - New: turnGroupOnOff() / Feature requested by API user.
 
-####v 1.1 (2017-03-13)
+#### v 1.1 (2017-03-13)
 - New: getDailyStat()
 - New: logConsumption() and getLogConsumption()
 - More error handling in provided arguments
 
-####v 1.0 (2017-03-12)
+#### v 1.0 (2017-03-12)
 - Changed: For convenience, all functions now return an array with datas in array['result'].
 If there is an error, message is in array['error'] and result is null. So you can easily check for error first.
 - Fix: $DHC->setDeviceValue('MyDevoloSiren', 1) now works (1 is the indice of the tone in the interface list).
 - Fix: Lot more error handling.
 
-####v2017.3.5 (2017-03-11)
+#### v2017.3.5 (2017-03-11)
 - New: getDeviceData() directly get a sensor data from a device, like temperature from a Motion Sensor. Each call to this function get latest datas from the device.
 
-####v2017.3.4 (2017-03-10)
+#### v2017.3.4 (2017-03-10)
 - New: getDeviceStates() report all sensors states from this device as array. You can now get temperature, light, last activity etc from a device like Motion Sensor, etc. Each call to this function get latest datas from the device.
 
-####v2017.3.3 (2017-03-09)
+#### v2017.3.3 (2017-03-09)
 - New: getDailyDiary(number_of_events)
 
-####v2017.3.2 (2017-03-09)
+#### v2017.3.2 (2017-03-09)
 - New: getAllBatteries()
 You can now request all devices batteries (devices without battery won't be returned).
 If you pass an int as argument, it will return devices with battery level under argument:
 
-####v2017.3.1 (2017-03-08)
+#### v2017.3.1 (2017-03-08)
 - New: getDeviceBattery() Note that wire connected device report -1, and virtual devices (http) report None.
 - New: getAllDevices()
 
-####v2017.3.0 (2017-03-08)
+#### v2017.3.0 (2017-03-08)
 - Code breaking: all now is in a php class to avoid variable and php session mess with your own script.
 - New: No more need to get device/scene before getting/changing its state, send its name as parameter.
 
-####v2017.2.0 (2017-03-06)
+#### v2017.2.0 (2017-03-06)
 - Support http device
 - Support Scenes
 
-####v2017.1.0 (2017-03-04)
+#### v2017.1.0 (2017-03-04)
 - First public version.
 
-##License
+## License
 
 The MIT License (MIT)
 
