@@ -169,7 +169,7 @@ I also highly guess the central will need a firmware update to fully support the
 
 ##Credits
 
-Done with help of source code from https://github.com/kdietrich/node-devolo!
+Thanks to [@kdietrich](https://github.com/kdietrich) for reverse engineering of Devolo authentification.
 
 ##Changes
 
