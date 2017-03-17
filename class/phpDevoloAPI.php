@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "1.23";
+	public $_version = "1.24";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -269,11 +269,11 @@ class DevoloDHC {
 			}
 
 			$sensorData = array('sensor'=>$sensor);
-			foreach (array_reverse($values) as $value => $timeOfDay)
+			$countValues = count($values)-1;
+			for($i=$countValues; $i>=1; $i--)
 			{
-				$timeOfDay = gmdate("H:i:s", $timeOfDay);
-				$datas = array($timeOfDay=>$value);
-				$sensorData[$timeOfDay] = $value;
+				$timeOfDay = gmdate("H:i:s", $timesOfDay[$i]);
+				$sensorData[$timeOfDay] = $values[$i];
 			}
 			array_push($jsonDatas, $sensorData);
 		}
