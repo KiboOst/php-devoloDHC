@@ -17,8 +17,8 @@ The following devices are currently supported:
 - Door/Window Contact (get)
 - Scenes (get/set)
 - Groups (get/set)
-- Timers (get)
-- Rules (get)
+- Timers (get/set)
+- Rules (get/set)
 
 Changing settings will appear in Devolo web interface / Apps daily diary with your account as usual.
 
@@ -30,37 +30,17 @@ Anyway this API use exact same commands as your Devolo Home Control, which is ba
 ## Requirements
 - PHP5+
 - cURL
-
-You can use this API on your lan (easyphp, Synology DSM, etc), but at least first time the API will need internet access to gather authorization stuff from www.mydevolo.com.
-
-You can use this API in php scripts on your internet domain, but the API need access to your Devolo Home Control box. This can be done with NAT/PAT rule, with a dyndns. In this case, specify the url as $localIP.
+- The API require internet access (it will authenticate against Devolo servers)
 
 
 ## How-to
 - Download class/phpDevoloAPI.php and put it on your server.
 - Include phpDevoloAPI.php in your script.
-- That's all!
-
-First time execution:
-The API will first request some authorization data from www.mydevolo.com.
-These data won't change for same user, so you can get them and directly pass them next time to get faster connection.
+- Start it with your Devolo username/password.
 
 ```php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
-$DHC = new DevoloDHC($login, $password, $localIP);
-$auth = $DHC->getAuth();
-echo "<pre>".json_encode($auth, JSON_PRETTY_PRINT)."</pre><br>";
-```
-
-So note return values and next time, call $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
-
-```php
-require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
-$DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
-```
-
-You can check for instannce error to know if connection went fine. If null, all good!
-```php
+$DHC = new DevoloDHC($login, $password);
 if (isset($DHC->error)) echo $DHC->error;
 ```
 
@@ -152,6 +132,12 @@ $DHC->setDeviceValue('My Devolo Siren', 5);
 
 //PRESS REMOTE SWITCH KEY:
 $DHC->pressDeviceKey('MySwitch', 3);
+
+//TURN RULE ACTIVE (1 or 0)
+$DHC->turnRuleOnOff('MyRule', 1);
+
+//TURN TIMER ACTIVE (1 or 0)
+$DHC->turnTimerOnOff('MyTimer', 1);
 ```
 
 Some people would like to have more than 3days consumption log for devices like Wall Plugs.
@@ -176,11 +162,14 @@ Of course, it needs a valid previously saved log file by the api. You can provid
 Relay, Dimmer and Shutter are in the central firmware yet (v8.0.45_2016-11-17), but will have to get some to fully support it (last availability is March/April 2017).
 I also highly guess the central will need a firmware update to fully support them...
 
-## Credits
-
-Thanks to [@kdietrich](https://github.com/kdietrich) for reverse engineering of Devolo authentification.
-
 ## Changes
+
+
+#### v 2.0 (2017-03-18)
+- All new authentication method with only your Devolo username and password! No more passkey, localIP etc.
+- Faster!
+- turnRuleOnOff()
+- turnTimerOnOff()
 
 #### v 1.2 (2017-03-14)
 - New: turnGroupOnOff() / Feature requested by API user.
