@@ -1,50 +1,37 @@
 <?php
 
-class DevoloDHC {
+class DevoloDHC{
 
-	public $_version = "1.25";
-
-	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
-	{
-		$this->_login = $login;
-		$this->_password = $password;
-		$this->_localHost = $localHost;
-		if (isset($uuid)) $this->_uuid = $uuid;
-		if (isset($gateway)) $this->_gateway = $gateway;
-		if (isset($passkey)) $this->_passkey = $passkey;
-		$this->init();
-	}
+	public $_version = "2.0";
 
 	//user functions======================================================
-	//Infos
-	public function getAuth() //return array of infos for faster connections with all datas
-	{
-		$auth = array(
-					"uuid" => $this->_uuid,
-					"gateway" => $this->_gateway,
-					"passkey" => $this->_passkey,
-					"call" => 'new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey)'
-					);
-		return array('result'=>$auth);
-	}
-
 	public function getInfos() //return infos from this api and the Devolo central
 	{
-		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways/'.$this->_gateway;
-		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
-		$data = json_decode($data, true);
+		if (!isset($this->_uuid))
+		{
+			//get uuid:
+			$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.page.Dashboard)"]}';
+			$answer = $this->sendCommand($jsonString);
+			$uuid = $answer['result'][0];
+			$uuid = explode('devolo.Dashboard.', $uuid)[1];
+			$this->_uuid = $uuid;
+		}
+
+		//get user infos:
+		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItems","params":[["devolo.UserPrefs.'.$this->_uuid.'"],0]}';
+		$answer = $this->sendCommand($jsonString);
+		$userInfos = $answer['result']['items'][0]['properties'];
+
+		//get central infos:
+		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItems","params":[["devolo.mprm.gw.PortalManager.'.$this->_token.'"],0]}';
+		$answer = $this->sendCommand($jsonString);
+		$centralInfos = $answer['result']['items'][0]['properties'];
 
 		$infos = array(
 				'phpAPI version' => $this->_version,
-				'uuid' => $this->_uuid,
 				'gateway' => $this->_gateway,
-				'name' => $data["name"],
-				'role' => $data["role"],
-				'status' => $data["status"],
-				'state' => $data["state"],
-				'type' => $data["type"],
-				'firmwareVersion' => $data["firmwareVersion"],
-				'externalAccess' => $data["externalAccess"]
+				'user' => $userInfos,
+				'central' => $centralInfos
 				);
 		return array('result'=>$infos);
 	}
@@ -249,7 +236,7 @@ class DevoloDHC {
 		{
 			$sensor = $item['widgetElementUID'];
 			$values = $item['value'];
-			$timesOfDay = $item['timeOfDay'];
+			if ( isset($item['timeOfDay']) ) $timesOfDay = $item['timeOfDay'];
 
 			if (strpos($device['model'], 'Door/Window:Sensor'))
 			{
@@ -365,6 +352,40 @@ class DevoloDHC {
 		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 		$result = ( ($answer['result'] == null) ? true : false );
 		return array('result'=>$result);
+	}
+
+	public function turnRuleOnOff($rule, $state=0)
+	{
+		if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
+		if ( isset($rule['error']) ) return $rule;
+
+		$value = ( ($state == 0) ? 'false' : 'true' );
+
+		$jsonString = '{
+			"jsonrpc":"2.0",
+			"method":"FIM/setProperty",
+			"params":["'.$rule['element'].'","enabled",'.$value.']}';
+
+		$answer = $this->sendCommand($jsonString);
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		return array('result'=>$answer);
+	}
+
+	public function turnTimerOnOff($timer, $state=0)
+	{
+		if ( is_string($timer) ) $timer = $this->getTimerByName($timer);
+		if ( isset($timer['error']) ) return $timer;
+
+		$value = ( ($state == 0) ? 'false' : 'true' );
+
+		$jsonString = '{
+			"jsonrpc":"2.0",
+			"method":"FIM/setProperty",
+			"params":["'.$timer['element'].'","enabled",'.$value.']}';
+
+		$answer = $this->sendCommand($jsonString);
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		return array('result'=>$answer);
 	}
 
 	public function turnDeviceOnOff($device, $state=0)
@@ -563,7 +584,7 @@ class DevoloDHC {
 		$this->_AllZones = array();
 		$this->_AllGroups = array();
 
-		$json = '{
+		$jsonString = '{
 			"jsonrpc":"2.0",
 			"method":"FIM/getFunctionalItems",
 			"params":[
@@ -571,11 +592,10 @@ class DevoloDHC {
 				]
 			}';
 
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 
 		//get all zones:
-
 		$zones = $jsonArray['result']["items"][0]['properties']['zones'];
 		foreach ($zones as $thisZone)
 		{
@@ -615,7 +635,7 @@ class DevoloDHC {
 	{
 		$this->_AllScenes = array();
 
-		$json = '{
+		$jsonString = '{
 			"jsonrpc":"2.0",
 			"method":"FIM/getFunctionalItems",
 			"params":[
@@ -623,7 +643,7 @@ class DevoloDHC {
 				]
 			}';
 
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 
 		//request datas for all scenes:
@@ -643,7 +663,7 @@ class DevoloDHC {
 	{
 		$this->_AllTimers = array();
 
-		$json = '{
+		$jsonString = '{
 			"jsonrpc":"2.0",
 			"method":"FIM/getFunctionalItems",
 			"params":[
@@ -651,7 +671,7 @@ class DevoloDHC {
 				]
 			}';
 
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 
 		//request datas for all rules:
@@ -671,7 +691,7 @@ class DevoloDHC {
 	{
 		$this->_AllRules = array();
 
-		$json = '{
+		$jsonString = '{
 			"jsonrpc":"2.0",
 			"method":"FIM/getFunctionalItems",
 			"params":[
@@ -679,7 +699,7 @@ class DevoloDHC {
 				]
 			}';
 
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 
 		//request datas for all rules:
@@ -755,57 +775,53 @@ class DevoloDHC {
 		return null;
 	}
 
-
 	//calling functions===================================================
-	protected function _request($protocol, $method, $host, $path, $jsonString, $login, $password, $cookie) //standard function handling all get/post request with curl | return string
+	protected function _request($method, $host, $path, $jsonString=null, $postinfo=null) //standard function handling all get/post request with curl | return string
 	{
 		if (!isset($this->_curlHdl))
 		{
 			$this->_curlHdl = curl_init();
+			curl_setopt($this->_curlHdl, CURLOPT_URL, $this->_authUrl);
+			curl_setopt($this->_curlHdl, CURLOPT_COOKIEJAR, '');
+			curl_setopt($this->_curlHdl, CURLOPT_COOKIEFILE, '');
+
+			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYPEER, false);
+
 			curl_setopt($this->_curlHdl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->_curlHdl, CURLOPT_FOLLOWLOCATION, true);
+
+			curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
 			curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0');
-			curl_setopt($this->_curlHdl, CURLOPT_AUTOREFERER, true);
-			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYPEER, false);
-			curl_setopt($this->_curlHdl, CURLOPT_HTTPHEADER, array(
-														'Connection: keep-alive',
-														'Content-Type: application/json'
-														)
-													);
-			curl_setopt($this->_curlHdl,CURLOPT_ENCODING , '');
 		}
 
-		$url = $protocol."://".$host.$path;
+		$url = $host.$path;
 		curl_setopt($this->_curlHdl, CURLOPT_URL, $url);
 
-		if ($protocol == 'http')
-		{
-			curl_setopt($this->_curlHdl, CURLOPT_HEADER, true);
-			curl_setopt($this->_curlHdl, CURLINFO_HEADER_OUT, true );
-		}
-
-		if ( isset($login) and isset($password) )
-		{
-			$auth = $login.":".$password;
-			curl_setopt($this->_curlHdl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-			curl_setopt($this->_curlHdl, CURLOPT_USERPWD, $auth);
-		}
-
 		if ($method == 'POST')
-			{
-				$jsonString = str_replace('"jsonrpc":"2.0",', '"jsonrpc":"2.0", "id":'.$this->_POSTid.',', $jsonString);
-				$this->_POSTid++;
-				curl_setopt($this->_curlHdl, CURLOPT_CUSTOMREQUEST, 'POST');
-				curl_setopt($this->_curlHdl, CURLOPT_POSTFIELDS, $jsonString);
-			}
-
-		if ( isset($cookie) ) //auth ok and get connection cookie, can ask and send stuff to central !!
 		{
-			$addCookies = 'JSESSIONID='.$cookie.'; GW_ID='.$this->_gateway.'; FIM_WS_FILTER=(|(GW_ID='.$this->_gateway.')(!(GW_ID=*)))';
-			curl_setopt($this->_curlHdl, CURLOPT_COOKIE, $addCookies);
+			curl_setopt($this->_curlHdl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($this->_curlHdl, CURLOPT_POST, true);
+		}
+		else
+		{
+			curl_setopt($this->_curlHdl, CURLOPT_POST, false);
+		}
 
+		if ( isset($jsonString) )
+		{
+			$jsonString = str_replace('"jsonrpc":"2.0",', '"jsonrpc":"2.0", "id":'.$this->_POSTid.',', $jsonString);
+			$this->_POSTid++;
 			curl_setopt($this->_curlHdl, CURLOPT_HEADER, false);
 			curl_setopt($this->_curlHdl, CURLINFO_HEADER_OUT, false );
+			curl_setopt($this->_curlHdl, CURLOPT_POST, false);
+			curl_setopt($this->_curlHdl, CURLOPT_CUSTOMREQUEST, 'POST');
+			curl_setopt($this->_curlHdl, CURLOPT_POSTFIELDS, $jsonString);
+		}
+
+		if ( isset($postinfo) )
+		{
+			curl_setopt($this->_curlHdl, CURLOPT_POSTFIELDS, $postinfo);
 		}
 
 		$response = curl_exec($this->_curlHdl);
@@ -815,7 +831,7 @@ class DevoloDHC {
 
 		if($response === false)
 		{
-			echo 'cURL error: ' . curl_error($this->_curlHdl);
+			echo 'cURL error: '.curl_error($this->_curlHdl);
 		}
 		else
 		{
@@ -826,7 +842,7 @@ class DevoloDHC {
 	protected function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc | return array
 	{
 		$devicesJson = json_encode($UIDSarray);
-		$json = '{
+		$jsonString = '{
 			"jsonrpc":"2.0",
 			"method":"FIM/getFunctionalItems",
 			"params":[
@@ -834,7 +850,7 @@ class DevoloDHC {
 				]
 			}';
 
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $json, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 		return $jsonArray;
 	}
@@ -847,120 +863,35 @@ class DevoloDHC {
 			"method":"FIM/invokeOperation",
 			"params":["'.$sensor.'","'.$operation.'",'.$value.']}';
 
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $jsonString, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 		return $jsonArray;
 	}
 
 	public function sendCommand($jsonString) //directly send json to central. Only works when all required authorisations are set | return array
 	{
-		$data = $this->_request('http', 'POST', $this->_localHost, '/remote/json-rpc', $jsonString, null, null, $this->_sessionID);
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
 		$jsonArray = json_decode($data, true);
 		return $jsonArray;
 	}
 
 	//functions authorization=============================================
-	protected function initAuth() //get uuid, gateway and passkey from www.devolo.com for authorization
-	{
-		//get uuid:
-		$data = $this->_request('https', 'GET', $this->_Host, $this->_apiVersion.'/users/uuid', null, $this->_login, $this->_password, null);
-		$data = json_decode($data, true);
-		if (isset($data["uuid"]))
-		{
-			$this->_uuid = $data["uuid"];
-		}
-		else
-		{
-			$this->error = "Couldn't find Devolo uuid.";
-			return false;
-		}
-
-		//get gateway:
-		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways';
-		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
-		$data = json_decode($data, true);
-		if (isset($data["items"][0]["href"]))
-		{
-			$var = explode( "/gateways/", $data["items"][0]["href"] );
-			$this->_gateway = $var[1];
-		}
-		else
-		{
-			$this->error = "Couldn't find Devolo gateway.";
-			return false;
-		}
-
-
-		//get localPasskey:
-		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways/'.$this->_gateway;
-		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
-		$data = json_decode($data, true);
-		if (isset($data["localPasskey"]))
-		{
-			$this->_passkey = $data["localPasskey"];
-			if ($data["state"] != 'devolo.hc_gateway.state.idle')
-			{
-				$this->error = "Devolo Central not IDLE.";
-				return false;
-			}
-		}
-		else
-		{
-			$this->error = "Couldn't find Devolo localPasskey.";
-			return false;
-		}
-
-		return true;
-	}
-
-	protected function getSessionID() //get and set cookie for later authorized requests
-	{
-		$this->_sessionID = null;
-
-		//get token:
-		$data = $this->_request('http', 'GET', $this->_localHost, '/dhlp/portal/light', null, $this->_uuid, $this->_passkey, null);
-		$var = explode('?token=', $data);
-		if(count($var)>1)
-		{
-			$var = explode('","', $var[1]);
-			$token = $var[0];
-		}
-		else
-		{
-			$this->error = "Couldn't find Devolo Central Token in response request.";
-			return false;
-		}
-
-		$path = '/dhlp/portal/light/?token='.$token;
-		$data = $this->_request('http', 'GET', $this->_localHost, $path, null, $this->_uuid, $this->_passkey, null);
-		$var = explode("JSESSIONID=", $data);
-		if(count($var)>1)
-		{
-			$var = explode("; ", $var[1]);
-			$this->_sessionID = $var[0];
-		}
-		else
-		{
-			$this->error = "Couldn't find sessionID from response request.";
-			return false;
-		}
-		return true;
-	}
-
-	protected $_Host = 'www.mydevolo.com';
-	protected $_apiVersion = '/v1';
-	protected $_POSTid = 0;
-	protected $_curlHdl = null;
-	public $error = null;
 
 	//user central stuff:
 	protected $_login;
 	protected $_password;
-	protected $_localHost;
-	protected $_uuid;
 	protected $_gateway;
-	protected $_passkey;
-	public $_sessionID; //the one to get first!
+	protected $_uuid;
+	protected $_token;
+
+	//authentification:
+	protected $_authUrl = 'https://www.mydevolo.com';
+	protected $_dhcUrl =  'https://homecontrol.mydevolo.com';
+	protected $_lang = '/en';
+	protected $_POSTid = 0;
+	protected $_curlHdl = null;
+	public $error = null;
+
 
 	//central stuff stuff(!):
 	public $_AllGroups = null;
@@ -992,14 +923,77 @@ class DevoloDHC {
 										'RemoteControl' => array('keyCount', 'keyPressed'),
 										'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
 										);
-
-	protected function init() //sorry, I'm a python guy :-]
+	protected function auth()
 	{
-		if ( !isset($this->_uuid) or !isset($this->_gateway) or !isset($this->_passkey) )
+		//get CSRF:
+		$response = $this->_request('GET', $this->_authUrl, $this->_lang, null);
+
+		$start = 'hidden" name="_csrf" value="';
+		$end = '"/>';
+		$csrf = explode($start, $response);
+		if(count($csrf)>1)
 		{
-			$this->initAuth();
+			$csrf = explode($end, $csrf[1]);
+			$csrf = $csrf[0];
 		}
-		if ($this->getSessionID() == true) $this->getDevices();
+		else
+		{
+			$this->error = "Couldn't find Devolo csrf.";
+			return false;
+		}
+
+		//post login/password:
+		$postinfo = '_csrf='.$csrf.'&username='.$this->_login.'&password='.$this->_password;
+		$response = $this->_request('POST', $this->_authUrl, $this->_lang, null, $postinfo);
+
+		//get gateway:
+		$path = $this->_lang.'/hc/gateways/status';
+		$response = $this->_request('GET', $this->_authUrl, $path, null);
+
+		$json = json_decode($response, true);
+		if (isset($json['data'][0]['id']))
+		{
+			$gateway = $json['data'][0]['id'];
+			$this->_gateway = $gateway;
+		}
+		else
+		{
+			$this->error = "Couldn't find Devolo gateway.";
+			return false;
+		}
+
+		//get fullLogin token:
+		$path = $this->_lang.'/hc/gateways/'.$gateway.'/open';
+		curl_setopt($this->_curlHdl, CURLOPT_HEADER, true);
+		$response = $this->_request('GET', $this->_authUrl, $path, null, null);
+
+		$start = 'https://homecontrol.mydevolo.com/dhp/portal/fullLogin/?token=';
+		$end = '1410000000001_1';
+		$loginToken = explode($start, $response);
+		if(count($loginToken)>1)
+		{
+			$loginToken = explode($end, $loginToken[1]);
+			$loginToken = $loginToken[0];
+			$this->_token = explode('&X-MPRM-LB=', $loginToken)[0];
+		}
+		else
+		{
+			$this->error = "Couldn't find Devolo loginToken.";
+			return false;
+		}
+
+		//fullLogin!
+		$path = '/dhp/portal/fullLogin/?token='.$loginToken.'1410000000001_1';
+		$response = $this->_request('GET', $this->_dhcUrl, $path, null, null);
+		return true;
+	}
+
+	function __construct($login, $password)
+	{
+		$this->_login = $login;
+		$this->_password = $password;
+
+		if ($this->auth() == true) $this->getDevices();
 	}
 
 //DevoloDHC end
