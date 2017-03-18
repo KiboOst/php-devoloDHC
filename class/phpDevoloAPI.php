@@ -2,7 +2,7 @@
 
 class DevoloDHC {
 
-	public $_version = "1.24";
+	public $_version = "1.25";
 
 	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null)
 	{
@@ -865,20 +865,52 @@ class DevoloDHC {
 		//get uuid:
 		$data = $this->_request('https', 'GET', $this->_Host, $this->_apiVersion.'/users/uuid', null, $this->_login, $this->_password, null);
 		$data = json_decode($data, true);
-		$this->_uuid = $data["uuid"];
+		if (isset($data["uuid"]))
+		{
+			$this->_uuid = $data["uuid"];
+		}
+		else
+		{
+			$this->error = "Couldn't find Devolo uuid.";
+			return false;
+		}
 
 		//get gateway:
 		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways';
 		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
 		$data = json_decode($data, true);
-		$var = explode( "/gateways/", $data["items"][0]["href"] );
-		$this->_gateway = $var[1];
+		if (isset($data["items"][0]["href"]))
+		{
+			$var = explode( "/gateways/", $data["items"][0]["href"] );
+			$this->_gateway = $var[1];
+		}
+		else
+		{
+			$this->error = "Couldn't find Devolo gateway.";
+			return false;
+		}
+
 
 		//get localPasskey:
 		$path = $this->_apiVersion.'/users/'.$this->_uuid.'/hc/gateways/'.$this->_gateway;
 		$data = $this->_request('https', 'GET', $this->_Host, $path, null, $this->_login, $this->_password, null);
 		$data = json_decode($data, true);
-		$this->_passkey = $data["localPasskey"];
+		if (isset($data["localPasskey"]))
+		{
+			$this->_passkey = $data["localPasskey"];
+			if ($data["state"] != 'devolo.hc_gateway.state.idle')
+			{
+				$this->error = "Devolo Central not IDLE.";
+				return false;
+			}
+		}
+		else
+		{
+			$this->error = "Couldn't find Devolo localPasskey.";
+			return false;
+		}
+
+		return true;
 	}
 
 	protected function getSessionID() //get and set cookie for later authorized requests
@@ -895,7 +927,8 @@ class DevoloDHC {
 		}
 		else
 		{
-			die("Couldn't find Devolo Central Token in response request.");
+			$this->error = "Couldn't find Devolo Central Token in response request.";
+			return false;
 		}
 
 		$path = '/dhlp/portal/light/?token='.$token;
@@ -908,14 +941,17 @@ class DevoloDHC {
 		}
 		else
 		{
-			die("Couldn't find sessionID from response request.");
+			$this->error = "Couldn't find sessionID from response request.";
+			return false;
 		}
+		return true;
 	}
 
 	protected $_Host = 'www.mydevolo.com';
 	protected $_apiVersion = '/v1';
 	protected $_POSTid = 0;
 	protected $_curlHdl = null;
+	public $error = null;
 
 	//user central stuff:
 	protected $_login;
@@ -963,8 +999,7 @@ class DevoloDHC {
 		{
 			$this->initAuth();
 		}
-		$this->getSessionID();
-		$this->getDevices();
+		if ($this->getSessionID() == true) $this->getDevices();
 	}
 
 //DevoloDHC end
