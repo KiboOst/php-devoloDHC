@@ -59,6 +59,11 @@ require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
 $DHC = new DevoloDHC($login, $password, $localIP, $uuid, $gateway, $passkey);
 ```
 
+You can check for instannce error to know if connection went fine. If null, all good!
+```php
+if (isset($DHC->error)) echo $DHC->error;
+```
+
 Let the fun begin:
 
 ```php
