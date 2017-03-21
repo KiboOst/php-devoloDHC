@@ -796,6 +796,7 @@ class DevoloDHC{
 		}
 
 		$url = $host.$path;
+		$url = filter_var($url, FILTER_SANITIZE_URL);
 		curl_setopt($this->_curlHdl, CURLOPT_URL, $url);
 
 		if ($method == 'POST')
@@ -829,14 +830,9 @@ class DevoloDHC{
 		//$info   = curl_getinfo($this->_curlHdl);
 		//echo "<pre>cURL info".json_encode($info, JSON_PRETTY_PRINT)."</pre><br>";
 
-		if($response === false)
-		{
-			echo 'cURL error: '.curl_error($this->_curlHdl);
-		}
-		else
-		{
-			return $response;
-		}
+		$this->error = null;
+		if($response === false) $this->error = curl_error($this->_curlHdl);
+		return $response;
 	}
 
 	protected function fetchItems($UIDSarray) //get infos from central for array of device, sensor, timer etc | return array
