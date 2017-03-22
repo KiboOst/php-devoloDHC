@@ -2,7 +2,7 @@
 
 class DevoloDHC{
 
-	public $_version = "2.0";
+	public $_version = "2.2";
 
 	//user functions======================================================
 	public function getInfos() //return infos from this api and the Devolo central
@@ -25,7 +25,9 @@ class DevoloDHC{
 		//get central infos:
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItems","params":[["devolo.mprm.gw.PortalManager.'.$this->_token.'"],0]}';
 		$answer = $this->sendCommand($jsonString);
-		$centralInfos = $answer['result']['items'][0]['properties'];
+
+		$centralInfos = 'None';
+		if ( isset($answer['result']['items'][0]['properties']) ) $centralInfos = $answer['result']['items'][0]['properties'];
 
 		$infos = array(
 				'phpAPI version' => $this->_version,
@@ -481,7 +483,7 @@ class DevoloDHC{
 		return array('result'=>null, 'error' => 'No supported sensor for this device');
 	}
 
-	public function resetSessionTimeout() //not allowed acton :-(
+	public function resetSessionTimeout() //not used actually!
 	{
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
 		$answer = $this->sendCommand($jsonString);
@@ -791,8 +793,11 @@ class DevoloDHC{
 			curl_setopt($this->_curlHdl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->_curlHdl, CURLOPT_FOLLOWLOCATION, true);
 
+			//curl_setopt($this->_curlHdl, CURLOPT_TIMEOUT, 5);
+
 			curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
 			curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0');
+
 		}
 
 		$url = $host.$path;
@@ -876,18 +881,17 @@ class DevoloDHC{
 	//user central stuff:
 	protected $_login;
 	protected $_password;
-	protected $_gateway;
-	protected $_uuid;
-	protected $_token;
+	public $_gateway;
+	public $_uuid;
+	public $_token;
+	public $error = null;
 
-	//authentification:
+	//authentication:
 	protected $_authUrl = 'https://www.mydevolo.com';
 	protected $_dhcUrl =  'https://homecontrol.mydevolo.com';
 	protected $_lang = '/en';
 	protected $_POSTid = 0;
 	protected $_curlHdl = null;
-	public $error = null;
-
 
 	//central stuff stuff(!):
 	public $_AllGroups = null;
@@ -919,33 +923,53 @@ class DevoloDHC{
 										'RemoteControl' => array('keyCount', 'keyPressed'),
 										'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
 										);
+	protected function getCSRF($htmlString)
+	{
+		$dom = new DOMDocument();
+		@$dom->loadHTML($htmlString);
+		$nodes = $dom->getElementsByTagName('input');
+		foreach($nodes as $node)
+		{
+			if($node->hasAttributes())
+			{
+				foreach($node->attributes as $attribute)
+				{
+					if($attribute->nodeName == 'type' && $attribute->nodeValue == 'hidden')
+					{
+						$name = $node->getAttribute('name');
+						if (strpos($name, 'csrf') !== false) return $node->getAttribute('value');
+					}
+				}
+			}
+		}
+		return False;
+	}
+
 	protected function auth()
 	{
-		//get CSRF:
+		//___________get CSRF_______________________________________________________
 		$response = $this->_request('GET', $this->_authUrl, $this->_lang, null);
-
-		$start = 'hidden" name="_csrf" value="';
-		$end = '"/>';
-		$csrf = explode($start, $response);
-		if(count($csrf)>1)
+		$csrf = $this->getCSRF($response);
+		if($csrf != false)
 		{
-			$csrf = explode($end, $csrf[1]);
-			$csrf = $csrf[0];
+			$this->_csrf = $csrf;
 		}
 		else
 		{
-			$this->error = "Couldn't find Devolo csrf.";
+			$this->error = "Couldn't find Devolo CSRF.";
 			return false;
 		}
 
-		//post login/password:
+
+		//___________post login/password____________________________________________
 		$postinfo = '_csrf='.$csrf.'&username='.$this->_login.'&password='.$this->_password;
 		$response = $this->_request('POST', $this->_authUrl, $this->_lang, null, $postinfo);
 
-		//get gateway:
+
+		//___________get gateway____________________________________________________
 		$path = $this->_lang.'/hc/gateways/status';
 		$response = $this->_request('GET', $this->_authUrl, $path, null);
-
+		//{"data":[{"id":"1504243620000087","status":"","disabled":false}]}
 		$json = json_decode($response, true);
 		if (isset($json['data'][0]['id']))
 		{
@@ -958,29 +982,22 @@ class DevoloDHC{
 			return false;
 		}
 
-		//get fullLogin token:
+
+		//___________get open Gateway_______________________________________________
 		$path = $this->_lang.'/hc/gateways/'.$gateway.'/open';
-		curl_setopt($this->_curlHdl, CURLOPT_HEADER, true);
+		//curl_setopt($this->_curlHdl, CURLOPT_HEADER, true);
 		$response = $this->_request('GET', $this->_authUrl, $path, null, null);
 
-		$start = 'https://homecontrol.mydevolo.com/dhp/portal/fullLogin/?token=';
-		$end = '1410000000001_1';
-		$loginToken = explode($start, $response);
-		if(count($loginToken)>1)
+
+		//___________get portal manager token (needed to request central infos)_____
+		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.gw.PortalManager)"]}';
+		$answer = $this->sendCommand($jsonString);
+		if ( isset($answer['result']) )
 		{
-			$loginToken = explode($end, $loginToken[1]);
-			$loginToken = $loginToken[0];
-			$this->_token = explode('&X-MPRM-LB=', $loginToken)[0];
-		}
-		else
-		{
-			$this->error = "Couldn't find Devolo loginToken.";
-			return false;
+			$var = $answer['result'][0];
+			$this->_token = str_replace('devolo.mprm.gw.PortalManager.', '', $var);
 		}
 
-		//fullLogin!
-		$path = '/dhp/portal/fullLogin/?token='.$loginToken.'1410000000001_1';
-		$response = $this->_request('GET', $this->_dhcUrl, $path, null, null);
 		return true;
 	}
 
