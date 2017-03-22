@@ -164,6 +164,9 @@ I also highly guess the central will need a firmware update to fully support the
 
 ## Changes
 
+#### v 2.2 (2017-03-22)
+- Minor bugfixs
+- Faster, more robust starting
 
 #### v 2.0 (2017-03-18)
 - All new authentication method with only your Devolo username and password! No more passkey, localIP etc.
