@@ -969,7 +969,6 @@ class DevoloDHC{
 		//___________get gateway____________________________________________________
 		$path = $this->_lang.'/hc/gateways/status';
 		$response = $this->_request('GET', $this->_authUrl, $path, null);
-		//{"data":[{"id":"1504243620000087","status":"","disabled":false}]}
 		$json = json_decode($response, true);
 		if (isset($json['data'][0]['id']))
 		{
@@ -985,7 +984,6 @@ class DevoloDHC{
 
 		//___________get open Gateway_______________________________________________
 		$path = $this->_lang.'/hc/gateways/'.$gateway.'/open';
-		//curl_setopt($this->_curlHdl, CURLOPT_HEADER, true);
 		$response = $this->_request('GET', $this->_authUrl, $path, null, null);
 
 
