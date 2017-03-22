@@ -2,7 +2,7 @@
 
 class DevoloDHC{
 
-	public $_version = "2.2";
+	public $_version = "2.21";
 
 	//user functions======================================================
 	public function getInfos() //return infos from this api and the Devolo central
@@ -21,6 +21,18 @@ class DevoloDHC{
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItems","params":[["devolo.UserPrefs.'.$this->_uuid.'"],0]}';
 		$answer = $this->sendCommand($jsonString);
 		$userInfos = $answer['result']['items'][0]['properties'];
+
+		if (!isset($this->_token))
+		{
+			//get portal manager token
+			$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.gw.PortalManager)"]}';
+			$answer = $this->sendCommand($jsonString);
+			if ( isset($answer['result']) )
+			{
+				$var = $answer['result'][0];
+				$this->_token = str_replace('devolo.mprm.gw.PortalManager.', '', $var);
+			}
+		}
 
 		//get central infos:
 		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItems","params":[["devolo.mprm.gw.PortalManager.'.$this->_token.'"],0]}';
@@ -969,6 +981,7 @@ class DevoloDHC{
 		//___________get gateway____________________________________________________
 		$path = $this->_lang.'/hc/gateways/status';
 		$response = $this->_request('GET', $this->_authUrl, $path, null);
+		//echo "<pre>gateway status:<br>".json_encode($response, JSON_PRETTY_PRINT)."</pre><br>";
 		$json = json_decode($response, true);
 		if (isset($json['data'][0]['id']))
 		{
@@ -986,25 +999,17 @@ class DevoloDHC{
 		$path = $this->_lang.'/hc/gateways/'.$gateway.'/open';
 		$response = $this->_request('GET', $this->_authUrl, $path, null, null);
 
-
-		//___________get portal manager token (needed to request central infos)_____
-		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.gw.PortalManager)"]}';
-		$answer = $this->sendCommand($jsonString);
-		if ( isset($answer['result']) )
-		{
-			$var = $answer['result'][0];
-			$this->_token = str_replace('devolo.mprm.gw.PortalManager.', '', $var);
-		}
-
 		return true;
 	}
 
-	function __construct($login, $password)
+	function __construct($login, $password, $connect=true)
 	{
 		$this->_login = $login;
 		$this->_password = $password;
-
-		if ($this->auth() == true) $this->getDevices();
+		if ($connect==true)
+		{
+			if ($this->auth() == true) $this->getDevices();
+		}
 	}
 
 //DevoloDHC end
