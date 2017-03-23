@@ -12,7 +12,7 @@ This can be use if you decide to make heavy polling/requests on your box, which 
 
 ## How-to
 - Download class/phpDevoloAPI.php and put it on your server.
-- Download localConnect/localphpDevoloAPI.php and put it on your server.
+- Download localConnection/localphpDevoloAPI.php and put it on your server.
 - Include phpDevoloAPI.php and localphpDevoloAPI.php in your script.
 
 Supported DevoloAPI: v2.21 and up.
@@ -24,7 +24,7 @@ These data won't change for same user, so you can get them and directly pass the
 
 - Note them in your script or in a config file you include before creating DevoloDHC().
 
-- To directly connect to your DHC box, you will need its local IP on your network. You can also put a dyndns adress if you have set some NAT/PAT to it.
+- To directly connect to your DHC box, you will need its local IP on your network. You can also put a dyndns address if you have set some NAT/PAT to it.
 
 ```php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
