@@ -32,9 +32,9 @@ Anyway this API use exact same commands as your Devolo Home Control, which is ba
 
 
 ## Requirements
-- PHP5+
-- cURL
-- The API require internet access (it will authenticate against Devolo servers)
+- PHP v5+
+- cURL (quite standard in PHP servers).
+- The API require internet access (it will authenticate against Devolo servers).
 
 
 ## How-to
