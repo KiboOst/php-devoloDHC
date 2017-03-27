@@ -2,7 +2,7 @@
 
 class DevoloDHC{
 
-	public $_version = "2.21";
+	public $_version = "2.3";
 
 	//user functions======================================================
 	public function getInfos() //return infos from this api and the Devolo central
@@ -355,6 +355,18 @@ class DevoloDHC{
 
 	public function getAllDevices() { return array('result'=>$this->_AllDevices); }
 
+	public function getMessageData($msg)
+	{
+		if ( is_string($msg) ) $msg = $this->getMessageByName($msg);
+		if ( isset($msg['error']) ) return $msg;
+
+		$answer = $this->fetchItems(array($msg['element']));
+
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+
+		return array('result' => $answer['result']['items'][0]['properties']['msgData']);
+	}
+
 	//SET:
 	public function startScene($scene)
 	{
@@ -495,9 +507,32 @@ class DevoloDHC{
 		return array('result'=>null, 'error' => 'No supported sensor for this device');
 	}
 
-	public function resetSessionTimeout() //not used actually!
+	public function sendMessage($msg)
 	{
-		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["'.$this->_uuid.'","resetSessionTimeout",[]]}';
+		if ( is_string($msg) ) $msg = $this->getMessageByName($msg);
+		if ( isset($msg['error']) ) return $msg;
+
+		$element = $msg['element'];
+		$answer = $this->invokeOperation($element, "send");
+		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
+		$result = ( ($answer['result'] == null) ? true : false );
+		return array('result'=>$result);
+	}
+
+	public function resetSessionTimeout() //not used actually, but works!
+	{
+		//cookie expire in 30min, anyway Devolo Central send resetSessionTimeout every 10mins
+		if (!isset($this->_uuid))
+		{
+			//get uuid:
+			$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.page.Dashboard)"]}';
+			$answer = $this->sendCommand($jsonString);
+			$uuid = $answer['result'][0];
+			$uuid = explode('devolo.Dashboard.', $uuid)[1];
+			$this->_uuid = $uuid;
+		}
+
+		$jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["devolo.UserPrefs.'.$this->_uuid.'","resetSessionTimeout",[]]}';
 		$answer = $this->sendCommand($jsonString);
 		if (isset($answer['error']["message"]) ) return array('result'=>null, 'error'=>$answer['error']["message"]);
 		return array('result'=>$answer['result']);
@@ -553,6 +588,17 @@ class DevoloDHC{
 			if ($thisGroup['name'] == $name) return $thisGroup;
 		}
 		return array('result'=>null, 'error' => 'Unfound group');
+	}
+
+	public function getMessageByName($name)
+	{
+		if (count($this->_AllMessages) == 0) $this->getMessages();
+
+		foreach($this->_AllMessages['customMessages'] as $thisMsg)
+		{
+			if ($thisMsg['name'] == $name) return $thisMsg;
+		}
+		return array('result'=>null, 'error' => 'Unfound Message');
 	}
 
 	//internal functions==================================================
@@ -729,6 +775,42 @@ class DevoloDHC{
 		}
 	}
 
+	protected function getMessages()
+	{
+		$this->_AllMessages = array();
+
+		$jsonString = '{
+			"jsonrpc":"2.0",
+			"method":"FIM/getFunctionalItems",
+			"params":[
+				["devolo.Messages"],0
+				]
+			}';
+
+		$data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
+		$jsonArray = json_decode($data, true);
+
+		$this->_AllMessages['pnEndpoints'] = $jsonArray['result']["items"][0]['properties']['pnEndpoints'];
+		$this->_AllMessages['phoneNumbers'] = $jsonArray['result']["items"][0]['properties']['phoneNumbers'];
+		$this->_AllMessages['emailExt'] = $jsonArray['result']["items"][0]['properties']['emailExt'];
+		$this->_AllMessages['emailAddresses'] = $jsonArray['result']["items"][0]['properties']['emailAddresses'];
+
+		//fetch custom Messages:
+		$jsonArray = $this->fetchItems($jsonArray['result']["items"][0]['properties']['customMessageUIDs']);
+
+		$this->_AllMessages['customMessages'] = array();
+		foreach($jsonArray['result']["items"] as $thisMsg)
+		{
+			$msg = array("name" => $thisMsg["properties"]["itemName"],
+							"id" => $thisMsg["UID"],
+							"description" => $thisMsg["properties"]["description"],
+							"base" => $thisMsg["properties"]["base"],
+							"element" => $thisMsg["properties"]['elementUIDs'][0]
+							);
+			array_push($this->_AllMessages['customMessages'], $msg);
+		}
+	}
+
 	protected function formatStates($sensorType, $key, $value)
 	{
 		if ($sensorType=="Meter" and $key=="totalValue") return $value."kWh";
@@ -807,7 +889,7 @@ class DevoloDHC{
 
 			//curl_setopt($this->_curlHdl, CURLOPT_TIMEOUT, 5);
 
-			curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
+			//curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
 			curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0');
 
 		}
@@ -894,7 +976,7 @@ class DevoloDHC{
 	protected $_login;
 	protected $_password;
 	public $_gateway;
-	public $_uuid;
+	public $_uuid = null;
 	public $_token;
 	public $error = null;
 
@@ -912,6 +994,7 @@ class DevoloDHC{
 	public $_AllRules = null;
 	public $_AllTimers = null;
 	public $_AllScenes = null;
+	public $_AllMessages = null;
 
 	//types stuff:
 	protected $_DevicesOnOff = array("BinarySwitch", "BinarySensor"); //supported devices type for on/off operation
