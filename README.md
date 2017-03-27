@@ -28,7 +28,7 @@ Feel free to submit an issue or pull request to add more.
 
 Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allowed.
 
-*This API is reverse-engineered, it can break anytime. But we will fix asap!*
+*This API is reverse-engineered, provided for research and development for interoperability.*
 
 
 ## Requirements
