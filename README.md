@@ -40,6 +40,7 @@ Anyway this API use exact same commands as your Devolo Home Control, which is ba
 
 ## How-to
 - Download class/phpDevoloAPI.php and put it on your server.
+- If you can, allow write permission for the API folder. It will support keeping DHC user session between consecutive executions of your script (also lot faster).
 - Include phpDevoloAPI.php in your script.
 - Start it with your Devolo username/password.
 
@@ -175,8 +176,11 @@ I also highly guess the central will need a firmware update to fully support the
 
 ## Changes
 
+#### v 2.5 (2017-03-29)
+- New: Session preservation for consecutive executions.
+
 #### v 2.3 (2017-03-27)
-- Messages support (getMessageData, sendMessage)
+- New: Messages support (getMessageData, sendMessage)
 
 #### v 2.2 (2017-03-22)
 - Minor bugfixs
