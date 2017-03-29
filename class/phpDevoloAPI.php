@@ -2,7 +2,7 @@
 
 class DevoloDHC{
 
-	public $_version = "2.3";
+	public $_version = "2.5";
 
 	//user functions======================================================
 	public function getInfos() //return infos from this api and the Devolo central
@@ -519,7 +519,7 @@ class DevoloDHC{
 		return array('result'=>$result);
 	}
 
-	public function resetSessionTimeout() //not used actually, but works!
+	public function resetSessionTimeout()
 	{
 		//cookie expire in 30min, anyway Devolo Central send resetSessionTimeout every 10mins
 		if (!isset($this->_uuid))
@@ -527,6 +527,8 @@ class DevoloDHC{
 			//get uuid:
 			$jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.page.Dashboard)"]}';
 			$answer = $this->sendCommand($jsonString);
+			if (isset($answer['result'][0]) ) $uuid = $answer['result'][0];
+			else return array('error'=> array('message'=>"can't find uuid!"));
 			$uuid = $answer['result'][0];
 			$uuid = explode('devolo.Dashboard.', $uuid)[1];
 			$this->_uuid = $uuid;
@@ -878,8 +880,9 @@ class DevoloDHC{
 		{
 			$this->_curlHdl = curl_init();
 			curl_setopt($this->_curlHdl, CURLOPT_URL, $this->_authUrl);
-			curl_setopt($this->_curlHdl, CURLOPT_COOKIEJAR, '');
-			curl_setopt($this->_curlHdl, CURLOPT_COOKIEFILE, '');
+
+			curl_setopt($this->_curlHdl, CURLOPT_COOKIEJAR, $this->_cookFile);
+			curl_setopt($this->_curlHdl, CURLOPT_COOKIEFILE, $this->_cookFile);
 
 			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYHOST, false);
 			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYPEER, false);
@@ -887,11 +890,8 @@ class DevoloDHC{
 			curl_setopt($this->_curlHdl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->_curlHdl, CURLOPT_FOLLOWLOCATION, true);
 
-			//curl_setopt($this->_curlHdl, CURLOPT_TIMEOUT, 5);
-
-			//curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
+			curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
 			curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0');
-
 		}
 
 		$url = $host.$path;
@@ -979,6 +979,7 @@ class DevoloDHC{
 	public $_uuid = null;
 	public $_token;
 	public $error = null;
+	public $_wasCookiesLoaded = false;
 
 	//authentication:
 	protected $_authUrl = 'https://www.mydevolo.com';
@@ -986,6 +987,7 @@ class DevoloDHC{
 	protected $_lang = '/en';
 	protected $_POSTid = 0;
 	protected $_curlHdl = null;
+	public $_cookFile = '';
 
 	//central stuff stuff(!):
 	public $_AllGroups = null;
@@ -1018,6 +1020,7 @@ class DevoloDHC{
 										'RemoteControl' => array('keyCount', 'keyPressed'),
 										'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
 										);
+
 	protected function getCSRF($htmlString)
 	{
 		$dom = new DOMDocument();
@@ -1040,8 +1043,47 @@ class DevoloDHC{
 		return False;
 	}
 
+	protected function cookies_are_hot()
+	{
+		if ( is_writable(__DIR__) ) //API can write in his folder
+		{
+			$this->_cookFile = __DIR__.'/dhc_cookies.txt';
+
+			if ( is_writable($this->_cookFile) and (time()-filemtime($this->_cookFile) < 1200) ) //cookie file exist and is younger than 20mins
+			{
+				$var = file_get_contents($this->_cookFile);
+				if(strpos($var, 'JSESSIONID') !== false)
+				{
+					$answer = $this->resetSessionTimeout();
+					if ( !isset($answer['error']["message"]) )
+					{
+						$this->_wasCookiesLoaded = true;
+						return true;
+					}
+					else
+					{
+						curl_close($this->_curlHdl); //was initialized by resetSessionTimeout and will keep old cookies file!
+						$this->_curlHdl = null;
+						unlink($this->_cookFile);
+						return false;
+					}
+				}
+			}
+			if ( is_writable($this->_cookFile) ) unlink($this->_cookFile);
+		}
+		else
+		{
+			$this->_wasCookiesLoaded = 'Unable to write cookies file';
+			return false;
+		}
+		return false;
+	}
+
 	protected function auth()
 	{
+		if($this->cookies_are_hot()) return true;
+		//No young cookie file, full authentication:
+
 		//___________get CSRF_______________________________________________________
 		$response = $this->_request('GET', $this->_authUrl, $this->_lang, null);
 		$csrf = $this->getCSRF($response);
@@ -1076,7 +1118,6 @@ class DevoloDHC{
 			$this->error = "Couldn't find Devolo gateway.";
 			return false;
 		}
-
 
 		//___________get open Gateway_______________________________________________
 		$path = $this->_lang.'/hc/gateways/'.$gateway.'/open';
