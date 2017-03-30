@@ -176,6 +176,12 @@ I also highly guess the central will need a firmware update to fully support the
 
 ## Changes
 
+#### v 2.55 (2017-03-30)
+- New: getWeather()
+- Change: faster getInfos()
+
+*Development should now slow down as we have it all. Keeping an eye on issues and requests of course!*
+
 #### v 2.5 (2017-03-29)
 - New: Session preservation for consecutive executions.
 
