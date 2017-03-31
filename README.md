@@ -9,10 +9,10 @@ This php API allows you to control your Devolo Home Control devices.
 The following devices are currently supported:
 
 - Smart Metering Plug (get/set)
-- Wall Switch (get/set)
+- Wall Switch / Key Fob (get/set)
 - Siren (get/set)
 - http devices (get/set)
-- Room Thermostat / Radiator Thermostat (get/set)
+- Room Thermostat / Radiator Thermostat(valve) (get/set)
 - Flood Sensor (get)
 - Humidity Sensor (get)
 - Motion Sensor (get)
@@ -63,11 +63,14 @@ $infos = $DHC->getInfos();
 echo "<pre>".json_encode($infos['result'], JSON_PRETTY_PRINT)."</pre><br>";
 ```
 
-For devices, rules, scenes, timers, you can call state or action by object or directly by name.
-
 READING OPERATIONS (change devices names by yours!):
 
 ```php
+//get all devices in a zone:
+$zone = $DHC->getDevicesByZone('living room');
+echo "<pre>zone:<br>".json_encode($zone, JSON_PRETTY_PRINT)."</pre><br>";
+
+//get rule or timer state:
 $state = $DHC->isRuleActive("MyRule");
 echo "Rule state:".$state['result']."<br>";
 $state = $DHC->isTimerActive("MyTimer");
@@ -81,7 +84,7 @@ echo "Device state:".$state['result']."<br>";
 $batteryLevel = $DHC->getDeviceBattery('My Motion Sensor');
 echo "BatteryLevel:".$batteryLevel['result']."<br>";
 
-//get all battery level under 20% (ommit argument to have all batteries levels):
+//get all batteries level under 20% (ommit argument to have all batteries levels):
 $BatLevels = $DHC->getAllBatteries(20);
 echo "<pre>Batteries Levels:<br>".json_encode($BatLevels['result'], JSON_PRETTY_PRINT)."</pre><br>";
 
@@ -97,7 +100,7 @@ $stats = $DHC->getDailyStat('My MotionSensor', 0)
 $weather = $DHC->getWeather()
 echo "<pre>weather:<br>".json_encode($weather, JSON_PRETTY_PRINT)."</pre><br>";
 
-//Get all sensors states from all device in your central (can be slow!):
+//Get all sensors states from all devices in your central (can be slow!):
 $AllDevices = $DHC->getAllDevices();
 foreach ($AllDevices['result'] as $device) {
     $states = $DHC->getDeviceStates($device);
@@ -108,20 +111,22 @@ foreach ($AllDevices['result'] as $device) {
 $states = $DHC->getDeviceStates('My Motion Sensor');
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 
-//get url from http device:
-$url = $DHC->getDeviceURL('myhttp device');
-
-//get message data:
-$url = $DHC->getMessageData('MyAlert');
-
-//You can also ask one sensor data for any device, like luminosity from a Motion Sensor or energy from a Wall Plug:
+//You can also ask one sensor data for any device, like light from a Motion Sensor or energy from a Wall Plug:
 $data = $DHC->getDeviceData('My Motion Sensor', 'light');
 echo "MyMotionSensor luminosity: ".$data['result']['value']."<br>";
+$data = $_DHC->getDeviceData('Radiator', 'temperature');
+echo $data['result']['value'];
 
 //You can first ask without data, it will return all available sensors datas for this device:
 //will echo energy datas, currentvalue, totalvalue and sincetime
 $data = $DHC->getDeviceData('My Wall Plug');
 echo "<pre>MyWallPlug available states:<br>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>";
+
+//get url from http device:
+$url = $DHC->getDeviceURL('myhttp device');
+
+//get message data:
+$url = $DHC->getMessageData('MyAlert');
 ```
 
 CHANGING OPERATIONS (change devices names by yours!):
@@ -130,6 +135,9 @@ CHANGING OPERATIONS (change devices names by yours!):
 //TURN DEVICE ON(1) or OFF(0):
 //supported: all on/off devices and http devices
 $DHC->turnDeviceOnOff("My Room wallPlug", 1);
+
+//TURN GROUP ON(1) or OFF(0):
+$DHC->turnGroupOnOff("My Plugs Group", 1);
 
 //RUN HTTP DEVICE:
 $DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course.
@@ -140,17 +148,17 @@ $DHC->startScene("We go out");
 //SEND MESSAGE:
 $DHC->sendMessage("Alert");
 
-//TURN GROUP ON(1) or OFF(0):
-$DHC->turnGroupOnOff("My Plugs Group", 1);
-
 //CHANGE THERMOSTAT/VALVE VALUE:
-$targetValue = $DHC->setDeviceValue('My thermostat valve', 21);
+$targetValue = $DHC->setDeviceValue('My radiator', 21);
 echo "<pre>".json_encode($targetValue['result'], JSON_PRETTY_PRINT)."</pre><br>";
+$_DHC->setDeviceValue('my thermostat', 19);
+//press thermostat button:
+$_DHC->pressDeviceKey('my thermostat', 1);
 
 //TURN SIREN ON: (last number is the indice of the tone in the interface list. For example, 1 is alarm and won't stop! 0 will!)
 $DHC->setDeviceValue('My Devolo Siren', 5);
 
-//PRESS REMOTE SWITCH KEY:
+//PRESS REMOTE SWITCH KEY OR KEY FOB KEY:
 $DHC->pressDeviceKey('MySwitch', 3);
 
 //TURN RULE ACTIVE (1 or 0)
