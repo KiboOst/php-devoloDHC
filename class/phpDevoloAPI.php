@@ -4,10 +4,10 @@
 
 class DevoloDHC{
 
-    public $_version = '2.55';
+    public $_version = '2.58';
 
     //user functions======================================================
-    public function getInfos() //return infos from this api and the Devolo central
+    public function getInfos() //return infos from this api, Devolo user, and Devolo central
     {
 
         if (!isset($this->_userInfos))
@@ -159,13 +159,32 @@ class DevoloDHC{
         foreach ($datas['result'] as $item)
         {
             array_push($availableDatas, $item['sensorType']);
-            if ($item['sensorType'] == $askData) return array('result'=>$item);
+            @array_push($availableDatas, $item['switchType']);
+            if ($item['sensorType'] == $askData or @$item['switchType'] == $askData) return array('result'=>$item);
         }
         $error = array('result'=>null,
                     'error' => 'Unfound data for this Device',
                     'available' => $availableDatas
                     );
         return $error;
+    }
+
+    public function getDevicesByZone($zoneName)
+    {
+        foreach($this->_AllZones as $thisZone)
+        {
+            if($thisZone['name'] == $zoneName)
+            {
+                $devicesUIDS = $thisZone['deviceUIDs'];
+                $jsonArray = array();
+                foreach ($this->_AllDevices as $thisDevice)
+                {
+                    if(in_array($thisDevice['uid'], $devicesUIDS)) array_push($jsonArray, $thisDevice);
+                }
+                return array('result'=>$jsonArray);
+            }
+        }
+        return array('result'=>null, 'error'=>'Unfound '.$zoneName);
     }
 
     public function getDeviceURL($device)
@@ -287,6 +306,38 @@ class DevoloDHC{
             array_push($jsonDatas, $sensorData);
         }
         return array('result'=>$jsonDatas);
+    }
+
+    public function getWeather()
+    {
+        $jsonString = '{
+            "jsonrpc":"2.0",
+            "method":"FIM/getFunctionalItems",
+            "params":[
+                ["devolo.WeatherWidget"],0
+                ]
+            }';
+
+        $answer = $this->sendCommand($jsonString);
+        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+
+        $data = $answer['result']['items'][0]['properties'];
+
+        $this->_Weather = array();
+        $this->_Weather['currentTemp'] = $data['currentTemp'];
+
+        unset($data['forecastData'][0]['weatherCode'] );
+        unset($data['forecastData'][1]['weatherCode'] );
+        unset($data['forecastData'][2]['weatherCode'] );
+
+        $this->_Weather['Today'] = $data['forecastData'][0];
+        $this->_Weather['Tomorrow'] = $data['forecastData'][1];
+        $this->_Weather['DayAfterT'] = $data['forecastData'][2];
+
+        $value = $data['lastUpdateTimestamp'];
+        $this->_Weather['lastUpdate'] = $this->formatStates('LastActivity', 'lastActivityTime', $value);
+
+        return array('result'=>$this->_Weather);
     }
 
     public function logConsumption($filePath='/')
@@ -525,38 +576,6 @@ class DevoloDHC{
         if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
         $result = ( ($answer['result'] == null) ? true : false );
         return array('result'=>$result);
-    }
-
-    public function getWeather()
-    {
-        $jsonString = '{
-            "jsonrpc":"2.0",
-            "method":"FIM/getFunctionalItems",
-            "params":[
-                ["devolo.WeatherWidget"],0
-                ]
-            }';
-
-        $answer = $this->sendCommand($jsonString);
-        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
-
-        $data = $answer['result']['items'][0]['properties'];
-
-        $this->_Weather = array();
-        $this->_Weather['currentTemp'] = $data['currentTemp'];
-
-        unset($data['forecastData'][0]['weatherCode'] );
-        unset($data['forecastData'][1]['weatherCode'] );
-        unset($data['forecastData'][2]['weatherCode'] );
-
-        $this->_Weather['Today'] = $data['forecastData'][0];
-        $this->_Weather['Tomorrow'] = $data['forecastData'][1];
-        $this->_Weather['DayAfterT'] = $data['forecastData'][2];
-
-        $value = $data['lastUpdateTimestamp'];
-        $this->_Weather['lastUpdate'] = $this->formatStates('LastActivity', 'lastActivityTime', $value);
-
-        return array('result'=>$this->_Weather);
     }
 
     public function resetSessionTimeout()
@@ -1152,9 +1171,14 @@ class DevoloDHC{
         //___________get gateway____________________________________________________
         $path = $this->_lang.'/hc/gateways/status';
         $response = $this->_request('GET', $this->_authUrl, $path, null);
-        //echo "<pre>gateway status:<br>".json_encode($response, JSON_PRETTY_PRINT)."</pre><br>";
         $json = json_decode($response, true);
-        if (isset($json['data'][0]['id']))
+
+        if (isset($json['data'][1]['id']))
+        {
+            $gateway = $json['data'][1]['id'];
+            $this->_gateway = $gateway;
+        }
+        elseif (isset($json['data'][0]['id'])) //may be demo gateway if there is one [1]...
         {
             $gateway = $json['data'][0]['id'];
             $this->_gateway = $gateway;
