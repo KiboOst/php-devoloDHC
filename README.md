@@ -1,3 +1,5 @@
+<img align="right" src="/readmeAssets/devoloAPI.jpg" width="150">
+
 # php-devoloDHC
 
 ## php API for Devolo Home Control
@@ -31,12 +33,14 @@ Anyway this API use exact same commands as your Devolo Home Control, which is ba
 
 *This API is reverse-engineered, provided for research and development for interoperability.*
 
+<img align="right" src="/readmeAssets/requirements.png" width="48">
 
 ## Requirements
 - PHP v5+
 - cURL (quite standard in PHP servers).
 - The API require internet access (it will authenticate against Devolo servers).
 
+<img align="right" src="/readmeAssets/howto.png" width="48">
 
 ## How-to
 - Download class/phpDevoloAPI.php and put it on your server.
@@ -87,7 +91,11 @@ echo "<pre>diary:<br>".json_encode($diary['result'], JSON_PRETTY_PRINT)."</pre><
 
 //get daily device stat:
 //0:today, 1:yesterday, 2:day before yesterday
-$stats = getDailyStat('My MotionSensor', 0)
+$stats = $DHC->getDailyStat('My MotionSensor', 0)
+
+//get weather report:
+$weather = $DHC->getWeather()
+echo "<pre>weather:<br>".json_encode($weather, JSON_PRETTY_PRINT)."</pre><br>";
 
 //Get all sensors states from all device in your central (can be slow!):
 $AllDevices = $DHC->getAllDevices();
@@ -168,11 +176,7 @@ echo "<pre>".json_encode($stats, JSON_PRETTY_PRINT)."</pre><br>";
 ```
 Of course, it needs a valid previously saved log file by the api. You can provide no dates (full log), or only one (set first as null if needed). Just respect day.month.year (php 'd.m.Y').
 
-## TODO
-
-- Waiting Devolo flush modules to integrate them (shutter, relay, dimmer).
-Relay, Dimmer and Shutter are in the central firmware yet (v8.0.45_2016-11-17), but will have to get some to fully support it (last availability is March/April 2017).
-I also highly guess the central will need a firmware update to fully support them...
+<img align="right" src="/readmeAssets/changes.png" width="48">
 
 ## Changes
 
