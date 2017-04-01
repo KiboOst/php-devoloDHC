@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.58';
+    public $_version = '2.59';
 
     //user functions======================================================
     public function getInfos() //return infos from this api, Devolo user, and Devolo central
@@ -665,7 +665,11 @@ class DevoloDHC{
     //internal functions==================================================
     protected function getDevices()
     {
-        if (count($this->_AllZones) == 0) $this->getZones();
+        if (count($this->_AllZones) == 0)
+        {
+            $result = $this->getZones();
+            if(isset($result['error'])) return $result;
+        }
 
         //get all devices from all zones:
         $UIDSarray = array();
@@ -717,6 +721,13 @@ class DevoloDHC{
 
         $data = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
         $jsonArray = json_decode($data, true);
+
+        //avoid account with just demo gateway:
+        if(!isset($jsonArray['result']["items"][0]['properties']['zones']))
+        {
+            $this->error = 'Seems a demo Gateway, or no zones ?';
+            return array('result'=>null, 'error'=>$this->error);
+        }
 
         //get all zones:
         $zones = $jsonArray['result']["items"][0]['properties']['zones'];
@@ -1041,16 +1052,8 @@ class DevoloDHC{
     public $_token;
     public $error = null;
     public $_wasCookiesLoaded = false;
-
-    //authentication:
-    protected $_login;
-    protected $_password;
-    protected $_authUrl = 'https://www.mydevolo.com';
-    protected $_dhcUrl =  'https://homecontrol.mydevolo.com';
-    protected $_lang = '/en';
-    protected $_POSTid = 0;
-    protected $_curlHdl = null;
     public $_cookFile = '';
+    public $_gateIdx = 0;
 
     //central stuff stuff(!):
     public $_AllDevices = null;
@@ -1062,27 +1065,38 @@ class DevoloDHC{
     public $_AllMessages = null;
     public $_Weather = null;
 
+    //authentication:
+    protected $_login;
+    protected $_password;
+    protected $_authUrl = 'https://www.mydevolo.com';
+    protected $_dhcUrl =  'https://homecontrol.mydevolo.com';
+    protected $_lang = '/en';
+    protected $_POSTid = 0;
+    protected $_curlHdl = null;
+
     //types stuff:
-    protected $_DevicesOnOff = array('BinarySwitch', 'BinarySensor'); //supported devices type for on/off operation
-    protected $_DevicesSend = array('HttpRequest'); //supported devices type for send operation
-    protected $_DevicesSendValue = array('MultiLevelSwitch', 'SirenMultiLevelSwitch'); //supported devices type for sendValue operation
-    protected $_DevicesPressKey = array('RemoteControl'); //supported devices type for pressKey operation
-    protected $_SensorsNoValues = array('HttpRequest'); //virtual devices
-    protected $_SensorValuesByType = array(
-                                        'MildewSensor' => array('sensorType', 'state'),
-                                        'BinarySensor' => array('sensorType', 'state'),
-                                        'BinarySwitch' => array('switchType', 'state', 'targetState'),
-                                        'SirenBinarySensor' => array('sensorType', 'state'),
-                                        'Meter' => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
-                                        'MultiLevelSensor' => array('sensorType', 'value'),
-                                        'HumidityBarZone' => array('sensorType', 'value'),
-                                        'DewpointSensor' => array('sensorType', 'value'),
-                                        'HumidityBarValue' => array('sensorType', 'value'),
+    protected $_DevicesOnOff        = array('BinarySwitch', 'BinarySensor'); //supported devices type for on/off operation
+    protected $_DevicesSend         = array('HttpRequest'); //supported devices type for send operation
+    protected $_DevicesSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch'); //supported devices type for sendValue operation
+    protected $_DevicesPressKey     = array('RemoteControl'); //supported devices type for pressKey operation
+
+    protected $_SensorsNoValues     = array('HttpRequest'); //virtual devices
+
+    protected $_SensorValuesByType  = array(
+                                        'MildewSensor'          => array('sensorType', 'state'),
+                                        'BinarySensor'          => array('sensorType', 'state'),
+                                        'BinarySwitch'          => array('switchType', 'state', 'targetState'),
+                                        'SirenBinarySensor'     => array('sensorType', 'state'),
+                                        'Meter'                 => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
+                                        'MultiLevelSensor'      => array('sensorType', 'value'),
+                                        'HumidityBarZone'       => array('sensorType', 'value'),
+                                        'DewpointSensor'        => array('sensorType', 'value'),
+                                        'HumidityBarValue'      => array('sensorType', 'value'),
                                         'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
                                         'SirenMultiLevelSensor' => array('sensorType', 'value'),
-                                        'LastActivity' => array('lastActivityTime'),
-                                        'RemoteControl' => array('keyCount', 'keyPressed'),
-                                        'MultiLevelSwitch' => array('switchType', 'value', 'targetValue', 'min', 'max')
+                                        'LastActivity'          => array('lastActivityTime'),
+                                        'RemoteControl'         => array('keyCount', 'keyPressed'),
+                                        'MultiLevelSwitch'      => array('switchType', 'value', 'targetValue', 'min', 'max')
                                         );
 
     protected function getCSRF($htmlString)
@@ -1173,14 +1187,9 @@ class DevoloDHC{
         $response = $this->_request('GET', $this->_authUrl, $path, null);
         $json = json_decode($response, true);
 
-        if (isset($json['data'][1]['id']))
+        if (isset($json['data'][$this->_gateIdx]['id']))
         {
-            $gateway = $json['data'][1]['id'];
-            $this->_gateway = $gateway;
-        }
-        elseif (isset($json['data'][0]['id'])) //may be demo gateway if there is one [1]...
-        {
-            $gateway = $json['data'][0]['id'];
+            $gateway = $json['data'][$this->_gateIdx]['id'];
             $this->_gateway = $gateway;
         }
         else
@@ -1196,10 +1205,12 @@ class DevoloDHC{
         return true;
     }
 
-    function __construct($login, $password, $connect=true)
+    function __construct($login, $password, $connect=true, $gateIdx=0)
     {
         $this->_login = $login;
         $this->_password = $password;
+        $this->_gateIdx = $gateIdx;
+
         if ($connect==true)
         {
             if ($this->auth() == true) $this->getDevices();
