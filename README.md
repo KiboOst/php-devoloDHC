@@ -48,9 +48,19 @@ Anyway this API use exact same commands as your Devolo Home Control, which is ba
 - Include phpDevoloAPI.php in your script.
 - Start it with your Devolo username/password.
 
+#### Connection
+
 ```php
 require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
 $DHC = new DevoloDHC($login, $password);
+if (isset($DHC->error)) echo $DHC->error;
+```
+
+If you have several Central Units, or keep the demo central on your *mydevolo* page, you can choose which to connect to:
+
+```php
+//(login | password | connect or not, default true | which central, default 0)
+$DHC = new DevoloDHC($login, $password, true, 1);
 if (isset($DHC->error)) echo $DHC->error;
 ```
 
@@ -62,8 +72,9 @@ echo "__infos__<br>";
 $infos = $DHC->getInfos();
 echo "<pre>".json_encode($infos['result'], JSON_PRETTY_PRINT)."</pre><br>";
 ```
+<img align="right" src="/readmeAssets/read.png" width="48">
 
-READING OPERATIONS (change devices names by yours!):
+#### READING OPERATIONS (change devices names by yours!):
 
 ```php
 //get all devices in a zone:
@@ -128,8 +139,9 @@ $url = $DHC->getDeviceURL('myhttp device');
 //get message data:
 $url = $DHC->getMessageData('MyAlert');
 ```
+<img align="right" src="/readmeAssets/set.png" width="48">
 
-CHANGING OPERATIONS (change devices names by yours!):
+#### CHANGING OPERATIONS (change devices names by yours!):
 
 ```php
 //TURN DEVICE ON(1) or OFF(0):
@@ -167,6 +179,9 @@ $DHC->turnRuleOnOff('MyRule', 1);
 //TURN TIMER ACTIVE (1 or 0)
 $DHC->turnTimerOnOff('MyTimer', 1);
 ```
+<img align="right" src="/readmeAssets/consumption.png" width="48">
+
+#### Consumption
 
 Some people would like to have more than 3days consumption log for devices like Wall Plugs.
 Here are two functions to log consumptions, and read them between two dates of choice. So you can make a cron task to call this function everyday, it will log the yesterday total consumption of each Wall Plugs:
@@ -223,6 +238,8 @@ Of course, it needs a valid previously saved log file by the api. You can provid
 If there is an error, message is in array['error'] and result is null. So you can easily check for error first.
 - Fix: $DHC->setDeviceValue('MyDevoloSiren', 1) now works (1 is the indice of the tone in the interface list).
 - Fix: Lot more error handling.
+
+<img align="right" src="/readmeAssets/mit.png" width="48">
 
 ## License
 
