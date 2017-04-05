@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.59';
+    public $_version = '2.6';
 
     //user functions======================================================
     public function getInfos() //return infos from this api, Devolo user, and Devolo central
@@ -340,6 +340,19 @@ class DevoloDHC{
         return array('result'=>$this->_Weather);
     }
 
+    public function getMessageData($msg)
+    {
+        if ( is_string($msg) ) $msg = $this->getMessageByName($msg);
+        if ( isset($msg['error']) ) return $msg;
+
+        $answer = $this->fetchItems(array($msg['element']));
+
+        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+
+        return array('result' => $answer['result']['items'][0]['properties']['msgData']);
+    }
+
+    //CONSUMPTION:
     public function logConsumption($filePath='/')
     {
         if (file_exists($filePath))
@@ -368,9 +381,28 @@ class DevoloDHC{
 
         //add yesterday sums to previously loaded datas:
         $prevDatas[$yesterday] = $datasArray[$yesterday];
+
+        //set recent up:
+        $keys = array_keys($prevDatas);
+        usort($keys, array('DevoloDHC','sortByDate'));
+        $newArray = array();
+        foreach ($keys as $key)
+        {
+            $newArray[$key] = $prevDatas[$key];
+        }
+        $prevDatas = $newArray;
+
+        //write it to file:
         $put = file_put_contents($filePath, json_encode($prevDatas, JSON_PRETTY_PRINT));
         if ($put) return array('result'=>$datasArray);
         return array('result'=>$datasArray, 'error'=>'Unable to write file!');
+    }
+
+    private function sortByDate($a, $b)
+    {
+        $t1 = strtotime($a);
+        $t2 = strtotime($b);
+        return ($t2 - $t1);
     }
 
     public function getLogConsumption($filePath, $dateStart=null, $dateEnd=null)
@@ -410,20 +442,6 @@ class DevoloDHC{
         {
             return array('result'=>null, 'error'=>'Unable to open file!');
         }
-    }
-
-    public function getAllDevices() { return array('result'=>$this->_AllDevices); }
-
-    public function getMessageData($msg)
-    {
-        if ( is_string($msg) ) $msg = $this->getMessageByName($msg);
-        if ( isset($msg['error']) ) return $msg;
-
-        $answer = $this->fetchItems(array($msg['element']));
-
-        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
-
-        return array('result' => $answer['result']['items'][0]['properties']['msgData']);
     }
 
     //SET:
@@ -578,27 +596,6 @@ class DevoloDHC{
         return array('result'=>$result);
     }
 
-    public function resetSessionTimeout()
-    {
-        //cookie expire in 30min, anyway Devolo Central send resetSessionTimeout every 10mins
-        if (!isset($this->_uuid))
-        {
-            //get uuid:
-            $jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.page.Dashboard)"]}';
-            $answer = $this->sendCommand($jsonString);
-            if (isset($answer['result'][0]) ) $uuid = $answer['result'][0];
-            else return array('error'=> array('message'=>"can't find uuid!"));
-            $uuid = $answer['result'][0];
-            $uuid = explode('devolo.Dashboard.', $uuid)[1];
-            $this->_uuid = $uuid;
-        }
-
-        $jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["devolo.UserPrefs.'.$this->_uuid.'","resetSessionTimeout",[]]}';
-        $answer = $this->sendCommand($jsonString);
-        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
-        return array('result'=>$answer['result']);
-    }
-
     //GET shorcuts:
     public function getDeviceByName($name)
     {
@@ -663,6 +660,40 @@ class DevoloDHC{
     }
 
     //internal functions==================================================
+    public function resetSessionTimeout()
+    {
+        //cookie expire in 30min, anyway Devolo Central send resetSessionTimeout every 10mins
+        if (!isset($this->_uuid))
+        {
+            //get uuid:
+            $jsonString = '{"jsonrpc":"2.0", "method":"FIM/getFunctionalItemUIDs","params":["(objectClass=com.devolo.fi.page.Dashboard)"]}';
+            $answer = $this->sendCommand($jsonString);
+            if (isset($answer['result'][0]) ) $uuid = $answer['result'][0];
+            else return array('error'=> array('message'=>"can't find uuid!"));
+            $uuid = $answer['result'][0];
+            $uuid = explode('devolo.Dashboard.', $uuid)[1];
+            $this->_uuid = $uuid;
+        }
+
+        $jsonString = '{"jsonrpc":"2.0", "method":"FIM/invokeOperation","params":["devolo.UserPrefs.'.$this->_uuid.'","resetSessionTimeout",[]]}';
+        $answer = $this->sendCommand($jsonString);
+        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+        return array('result'=>$answer['result']);
+    }
+
+    public function debugDevice($device)
+    {
+        if ( is_string($device) ) $device = $this->getDeviceByName($device);
+        if ( isset($device['error']) ) return $device;
+
+        $jsonArray = $this->fetchItems(array($device['uid']));
+        echo '<pre>Device:<br>',json_encode($jsonArray, JSON_PRETTY_PRINT),'</pre><br>';
+
+        $elements = $jsonArray['result']['items'][0]['properties']['elementUIDs'];
+        $jsonArray = $this->fetchItems($elements);
+        echo '<pre>elementUIDs:<br>',json_encode($jsonArray, JSON_PRETTY_PRINT),'</pre><br>';
+    }
+
     protected function getDevices()
     {
         if (count($this->_AllZones) == 0)
@@ -1215,6 +1246,31 @@ class DevoloDHC{
         {
             if ($this->auth() == true) $this->getDevices();
         }
+    }
+
+    /*
+    dynamic call to getAllxxx / $_DHC->getAllDevices();
+    if _AllDevices is null, call getDevices, return _AllDevices
+
+    getAllDevices() / getAllZones() / getAllGroups() / getAllRules() / getAllTimers() / getAllScenes() / getAllMessages()
+    */
+    public function __call($name, $args)
+    {
+        if (preg_match('/^get(.+)/', $name, $matches))
+        {
+            $var_name = '_'.$matches[1];
+            $fn_name = substr($var_name, 4);
+
+            if (@count($this->$var_name) == 0)
+            {
+                $this->$var_name = 'Undefined';
+                call_user_func(array($this, 'get'.$fn_name));
+            }
+            //unknown var/function:
+            return array('result'=>$this->$var_name);
+        }
+        //no get, no function!
+        return array('result'=>null, 'error'=>'Undefined function');
     }
 
 //DevoloDHC end
