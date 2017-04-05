@@ -203,6 +203,10 @@ Of course, it needs a valid previously saved log file by the api. You can provid
 
 ## Changes
 
+#### v 2.6 (2017-04-05)
+- New: getAllZones() / getAllGroups() / getAllRules() / getAllTimers() / getAllScenes() / getAllMessages()
+- Change: logConsumption() now sort result with recent dates up.
+
 #### v 2.55 (2017-03-30)
 - New: getWeather()
 - Change: faster getInfos()
