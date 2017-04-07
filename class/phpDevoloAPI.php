@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.6';
+    public $_version = '2.61';
 
     //user functions======================================================
     public function getInfos() //return infos from this api, Devolo user, and Devolo central
@@ -690,8 +690,12 @@ class DevoloDHC{
         echo '<pre>Device:<br>',json_encode($jsonArray, JSON_PRETTY_PRINT),'</pre><br>';
 
         $elements = $jsonArray['result']['items'][0]['properties']['elementUIDs'];
-        $jsonArray = $this->fetchItems($elements);
-        echo '<pre>elementUIDs:<br>',json_encode($jsonArray, JSON_PRETTY_PRINT),'</pre><br>';
+        $elementsArray = $this->fetchItems($elements);
+        echo '<pre>elementUIDs:<br>',json_encode($elementsArray, JSON_PRETTY_PRINT),'</pre><br>';
+
+        $settings = $jsonArray['result']['items'][0]['properties']['settingUIDs'];
+        $settingsArray = $this->fetchItems($settings);
+        echo '<pre>settingUIDs:<br>',json_encode($settingsArray, JSON_PRETTY_PRINT),'</pre><br>';
     }
 
     protected function getDevices()
