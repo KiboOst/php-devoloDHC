@@ -111,25 +111,17 @@ $stats = $DHC->getDailyStat('My MotionSensor', 0)
 $weather = $DHC->getWeather()
 echo "<pre>weather:<br>".json_encode($weather, JSON_PRETTY_PRINT)."</pre><br>";
 
-//Get all sensors states from all devices in your central (can be slow!):
-$AllDevices = $DHC->getAllDevices();
-foreach ($AllDevices['result'] as $device) {
-    $states = $DHC->getDeviceStates($device);
-    echo "<pre>states:<br>".$device['name'].":".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
-}
-
-//Or get one device states:
+//Get one device states (all sensors):
 $states = $DHC->getDeviceStates('My Motion Sensor');
 echo "<pre>States: My Siren:".json_encode($states, JSON_PRETTY_PRINT)."</pre><br>";
 
-//You can also ask one sensor data for any device, like light from a Motion Sensor or energy from a Wall Plug:
+//Get one sensor data for any device, like light from a Motion Sensor or energy from a Wall Plug:
 $data = $DHC->getDeviceData('My Motion Sensor', 'light');
 echo "MyMotionSensor luminosity: ".$data['result']['value']."<br>";
 $data = $_DHC->getDeviceData('Radiator', 'temperature');
 echo $data['result']['value'];
 
 //You can first ask without data, it will return all available sensors datas for this device:
-//will echo energy datas, currentvalue, totalvalue and sincetime
 $data = $DHC->getDeviceData('My Wall Plug');
 echo "<pre>MyWallPlug available states:<br>".json_encode($data, JSON_PRETTY_PRINT)."</pre><br>";
 
@@ -198,6 +190,16 @@ $stats = $DHC->getLogConsumption('log.json', '01.03.2017', '31.03.2017');
 echo "<pre>".json_encode($stats, JSON_PRETTY_PRINT)."</pre><br>";
 ```
 Of course, it needs a valid previously saved log file by the api. You can provide no dates (full log), or only one (set first as null if needed). Just respect day.month.year (php 'd.m.Y').
+
+#### Unsupported device
+
+If you have unsupported device, you can call special function with this device and post the return in a new issue.
+
+[Request for unsupported device](../../issues/)
+
+```php
+$help = $DHC->debugDevice('MyStrangeDevice');
+```
 
 <img align="right" src="/readmeAssets/changes.png" width="48">
 
