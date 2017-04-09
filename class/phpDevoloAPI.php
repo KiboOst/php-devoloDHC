@@ -4,8 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.61';
-
+    public $_version = '2.62';
     //user functions======================================================
     public function getInfos() //return infos from this api, Devolo user, and Devolo central
     {
@@ -90,7 +89,7 @@ class DevoloDHC{
         {
             $sensorType = $this->getSensorType($sensor);
 
-            if (in_array($sensorType, $this->_DevicesOnOff))
+            if (in_array($sensorType, $this->_SensorsOnOff))
             {
                 $answer = $this->fetchItems(array($sensor));
                 if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
@@ -137,7 +136,7 @@ class DevoloDHC{
                     $value = $this->formatStates($sensorType, $key, $value);
                     $jsonSensor[$key] = $value;
                 }
-                array_push($arrayStates, $jsonSensor);
+                $arrayStates[] = $jsonSensor;
             }
             elseif( !in_array($sensorType, $this->_SensorsNoValues) ) //Unknown, unsupported sensor!
             {
@@ -179,7 +178,7 @@ class DevoloDHC{
                 $jsonArray = array();
                 foreach ($this->_AllDevices as $thisDevice)
                 {
-                    if(in_array($thisDevice['uid'], $devicesUIDS)) array_push($jsonArray, $thisDevice);
+                    if(in_array($thisDevice['uid'], $devicesUIDS)) $jsonArray[] = $thisDevice;
                 }
                 return array('result'=>$jsonArray);
             }
@@ -254,7 +253,7 @@ class DevoloDHC{
                             'author' => $author,
                             'timeOfDay' => $timeOfDay
                             );
-            array_push($jsonDatas, $datas);
+            $jsonDatas[] = $datas;
         }
         return array('result'=>$jsonDatas);
     }
@@ -303,7 +302,7 @@ class DevoloDHC{
                 $timeOfDay = gmdate("H:i:s", $timesOfDay[$i]);
                 $sensorData[$timeOfDay] = $values[$i];
             }
-            array_push($jsonDatas, $sensorData);
+            $jsonDatas[] = $sensorData;
         }
         return array('result'=>$jsonDatas);
     }
@@ -505,14 +504,14 @@ class DevoloDHC{
         {
             $sensorType = $this->getSensorType($sensor);
 
-            if (in_array($sensorType, $this->_DevicesOnOff))
+            if (in_array($sensorType, $this->_SensorsOnOff))
             {
                 $operation = ($state == 0 ? 'turnOff' : 'turnOn');
                 $answer = $this->invokeOperation($sensor, $operation);
                 if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
                 return array('result'=>true);
             }
-            if (in_array($sensorType, $this->_DevicesSend) and ($state == 1))
+            if (in_array($sensorType, $this->_SensorsSend) and ($state == 1))
             {
                 $operation = "send";
                 $answer = $this->invokeOperation($sensor, $operation);
@@ -549,7 +548,7 @@ class DevoloDHC{
         {
             $sensorType = $this->getSensorType($sensor);
 
-            if (in_array($sensorType, $this->_DevicesSendValue))
+            if (in_array($sensorType, $this->_SensorsSendValue))
             {
                 $operation = 'sendValue';
                 $answer = $this->invokeOperation($sensor, $operation, $value);
@@ -573,7 +572,7 @@ class DevoloDHC{
         foreach($sensors as $sensor)
         {
             $sensorType = $this->getSensorType($sensor);
-            if (in_array($sensorType, $this->_DevicesPressKey))
+            if (in_array($sensorType, $this->_SensorsPressKey))
             {
                 $operation = 'pressKey';
                 $answer = $this->invokeOperation($sensor, $operation, $key);
@@ -713,7 +712,7 @@ class DevoloDHC{
             $thisDevices = $thisZone['deviceUIDs'];
             foreach ($thisDevices as $thisDevice)
             {
-                array_push($UIDSarray, $thisDevice);
+                $UIDSarray[] = $thisDevice;
             }
         }
 
@@ -736,7 +735,7 @@ class DevoloDHC{
                             'batteryLevel' => (isset($thisDevice['properties']['batteryLevel']) ? $thisDevice['properties']['batteryLevel'] : 'None'),
                             'model' => (isset($thisDevice['properties']['deviceModelUID']) ? $thisDevice['properties']['deviceModelUID'] : 'None')
                             );
-            array_push($devices, $device);
+            $devices[] = $device;
         }
         $this->_AllDevices = $devices;
     }
@@ -776,7 +775,7 @@ class DevoloDHC{
                             'id' => $thisID,
                             'deviceUIDs' => $thisDevices
                             );
-            array_push($this->_AllZones, $zone);
+            $this->_AllZones[] = $zone;
         }
 
         //get each group infos:
@@ -796,7 +795,7 @@ class DevoloDHC{
                             'synchronized' => $thisSync,
                             'deviceUIDs' => $thisDevices
                             );
-            array_push($this->_AllGroups, $group);
+            $this->_AllGroups[] = $group;
         }
     }
 
@@ -973,7 +972,7 @@ class DevoloDHC{
 
     protected function getValuesByType($sensorType) //ex: devolo.BinarySensor:hdm:ZWave:D8F7DDE2/10
     {
-        foreach ($this->_SensorValuesByType as $type => $param)
+        foreach($this->_SensorValuesByType as $type => $param)
         {
             if ($type == $sensorType) return $param;
         }
@@ -999,6 +998,8 @@ class DevoloDHC{
 
             curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
             curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0');
+
+            curl_setopt($this->_curlHdl, CURLOPT_ENCODING , "gzip");
         }
 
         $url = filter_var($host.$path, FILTER_SANITIZE_URL);
@@ -1110,12 +1111,12 @@ class DevoloDHC{
     protected $_curlHdl = null;
 
     //types stuff:
-    protected $_DevicesOnOff        = array('BinarySwitch', 'BinarySensor'); //supported devices type for on/off operation
-    protected $_DevicesSend         = array('HttpRequest'); //supported devices type for send operation
-    protected $_DevicesSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch'); //supported devices type for sendValue operation
-    protected $_DevicesPressKey     = array('RemoteControl'); //supported devices type for pressKey operation
+    protected $_SensorsOnOff        = array('BinarySwitch', 'BinarySensor'); //supported sensor types for on/off operation
+    protected $_SensorsSend         = array('HttpRequest'); //supported sensor types for send operation
+    protected $_SensorsSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch'); //supported sensor types for sendValue operation
+    protected $_SensorsPressKey     = array('RemoteControl'); //supported sensor types for pressKey operation
 
-    protected $_SensorsNoValues     = array('HttpRequest'); //virtual devices
+    protected $_SensorsNoValues     = array('HttpRequest'); //virtual device sensor
 
     protected $_SensorValuesByType  = array(
                                         'MildewSensor'          => array('sensorType', 'state'),
@@ -1242,8 +1243,8 @@ class DevoloDHC{
 
     function __construct($login, $password, $connect=true, $gateIdx=0)
     {
-        $this->_login = $login;
-        $this->_password = $password;
+        $this->_login = urlencode($login);
+        $this->_password = urlencode($password);
         $this->_gateIdx = $gateIdx;
 
         if ($connect==true)
