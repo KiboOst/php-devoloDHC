@@ -1179,7 +1179,7 @@ class DevoloDHC{
                     {
                         curl_close($this->_curlHdl); //was initialized by resetSessionTimeout and will keep old cookies file!
                         $this->_curlHdl = null;
-                        unlink($this->_cookFile);
+                        @unlink($this->_cookFile);
                         return false;
                     }
                 }
