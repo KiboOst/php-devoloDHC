@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.62';
+    public $_version = '2.63';
     //user functions======================================================
     public function getInfos() //return infos from this api, Devolo user, and Devolo central
     {
@@ -138,7 +138,7 @@ class DevoloDHC{
                 }
                 $arrayStates[] = $jsonSensor;
             }
-            elseif( !in_array($sensorType, $this->_SensorsNoValues) ) //Unknown, unsupported sensor!
+            elseif ( !in_array($sensorType, $this->_SensorsNoValues) ) //Unknown, unsupported sensor!
             {
                 $answer = $this->fetchItems(array($sensor));
                 echo "DEBUG - UNKNOWN PARAM - Please help and report this message on https://github.com/KiboOst/php-devoloDHC or email it to".base64_decode('a2lib29zdEBmcmVlLmZy')." <br>";
@@ -172,13 +172,13 @@ class DevoloDHC{
     {
         foreach($this->_AllZones as $thisZone)
         {
-            if($thisZone['name'] == $zoneName)
+            if ($thisZone['name'] == $zoneName)
             {
                 $devicesUIDS = $thisZone['deviceUIDs'];
                 $jsonArray = array();
                 foreach ($this->_AllDevices as $thisDevice)
                 {
-                    if(in_array($thisDevice['uid'], $devicesUIDS)) $jsonArray[] = $thisDevice;
+                    if (in_array($thisDevice['uid'], $devicesUIDS)) $jsonArray[] = $thisDevice;
                 }
                 return array('result'=>$jsonArray);
             }
@@ -267,7 +267,7 @@ class DevoloDHC{
 
         $operation = "retrieveDailyStatistics";
         $statSensor = $device['statUID'];
-        if($statSensor=='None') return array('result'=>null, 'error'=>"No statistic for such device.");
+        if ($statSensor=='None') return array('result'=>null, 'error'=>"No statistic for such device.");
         $answer = $this->invokeOperation($statSensor, $operation, $dayBefore);
         if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
 
@@ -422,7 +422,7 @@ class DevoloDHC{
             {
                 $thisDate = $keys[$i];
                 $data = $prevDatas[$thisDate];
-                if ( strtotime($thisDate)<=strtotime($dateEnd) and strtotime($thisDate)>=strtotime($dateStart))
+                if ( strtotime($thisDate)<=strtotime($dateStart) and strtotime($thisDate)>=strtotime($dateEnd))
                 {
                     foreach ($data as $name => $value)
                     {
@@ -702,7 +702,7 @@ class DevoloDHC{
         if (count($this->_AllZones) == 0)
         {
             $result = $this->getZones();
-            if(isset($result['error'])) return $result;
+            if (isset($result['error'])) return $result;
         }
 
         //get all devices from all zones:
@@ -757,7 +757,7 @@ class DevoloDHC{
         $jsonArray = json_decode($data, true);
 
         //avoid account with just demo gateway:
-        if(!isset($jsonArray['result']["items"][0]['properties']['zones']))
+        if (!isset($jsonArray['result']["items"][0]['properties']['zones']))
         {
             $this->error = 'Seems a demo Gateway, or no zones ?';
             return array('result'=>null, 'error'=>$this->error);
@@ -1038,7 +1038,7 @@ class DevoloDHC{
         //echo "<pre>cURL info".json_encode($info, JSON_PRETTY_PRINT)."</pre><br>";
 
         $this->error = null;
-        if($response === false) $this->error = curl_error($this->_curlHdl);
+        if ($response === false) $this->error = curl_error($this->_curlHdl);
         return $response;
     }
 
@@ -1142,11 +1142,11 @@ class DevoloDHC{
         $nodes = $dom->getElementsByTagName('input');
         foreach($nodes as $node)
         {
-            if($node->hasAttributes())
+            if ($node->hasAttributes())
             {
                 foreach($node->attributes as $attribute)
                 {
-                    if($attribute->nodeName == 'type' && $attribute->nodeValue == 'hidden')
+                    if ($attribute->nodeName == 'type' && $attribute->nodeValue == 'hidden')
                     {
                         $name = $node->getAttribute('name');
                         if (stripos($name, 'csrf') !== false) return $node->getAttribute('value');
@@ -1167,7 +1167,7 @@ class DevoloDHC{
             {
                 //return true; //no check is 0.15s faster!
                 $var = file_get_contents($this->_cookFile);
-                if(strstr($var, 'JSESSIONID'))
+                if (strstr($var, 'JSESSIONID'))
                 {
                     $answer = $this->resetSessionTimeout();
                     if ( !isset($answer['error']['message']) )
@@ -1196,13 +1196,20 @@ class DevoloDHC{
 
     protected function auth()
     {
-        if($this->cookies_are_hot()) return true;
+        if ($this->cookies_are_hot()) return true;
         //No young cookie file, full authentication:
 
         //___________get CSRF_______________________________________________________
         $response = $this->_request('GET', $this->_authUrl, $this->_lang, null);
+
+        if($response==false)
+        {
+            $this->error = "Can't connect to Devolo servers.";
+            return false;
+        }
+
         $csrf = $this->getCSRF($response);
-        if($csrf != false)
+        if ($csrf != false)
         {
             $this->_csrf = $csrf;
         }
