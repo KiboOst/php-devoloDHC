@@ -12,7 +12,7 @@ Not having myself these devices, I can't fully test them, or would need co-user 
 
 ## How-to
 
-- See https://github.com/KiboOst/php-devoloDHC for getting it running.
+- See [*stable version How-To*](../../../../php-devoloDHC#how-to) for getting it running.
 - Replace stable version by dev version.
 
 <img align="right" src="/readmeAssets/requirements.png" width="48">
