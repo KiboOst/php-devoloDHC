@@ -141,7 +141,7 @@ class DevoloDHC{
             elseif ( !in_array($sensorType, $this->_SensorsNoValues) ) //Unknown, unsupported sensor!
             {
                 $answer = $this->fetchItems(array($sensor));
-                echo "DEBUG - UNKNOWN PARAM - Please help and report this message on https://github.com/KiboOst/php-devoloDHC or email it to".base64_decode('a2lib29zdEBmcmVlLmZy')." <br>";
+                echo "DEBUG - UNKNOWN PARAM - Please help and report this message on https://github.com/KiboOst/php-devoloDHC or email it to ".base64_decode('a2lib29zdEBmcmVlLmZy')." <br>";
                 echo '<pre>infos:'.json_encode($answer, JSON_PRETTY_PRINT).'</pre><br>';
             }
         }
