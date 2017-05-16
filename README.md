@@ -3,7 +3,6 @@
 # php-devoloDHC
 
 ## php API for Devolo Home Control
-(C) 2017, KiboOst
 
 This php API allows you to control your Devolo Home Control devices.
 The following devices are currently supported:
@@ -27,11 +26,9 @@ Changing settings will appear in Devolo web interface / Apps daily diary with yo
 
 Feel free to submit an issue or pull request to add more.
 
-**This isn't an official API | USE AT YOUR OWN RISK!**
-
-Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allowed.
-
-*This API is reverse-engineered, provided for research and development for interoperability.*
+*This isn't an official API | USE AT YOUR OWN RISK!<br />
+Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allowed.<br />
+This API is reverse-engineered, provided for research and development for interoperability.*
 
 <img align="right" src="/readmeAssets/requirements.png" width="48">
 
@@ -181,8 +178,7 @@ Here are two functions to log consumptions, and read them between two dates of c
 ```php
 $DHC->logConsumption('log.json');
 ```
-If you don't provide a file path, or it can't write to, the api will return an error, but also provide the result (so you can write your own custom functions).
-
+If you don't provide a file path, or it can't write to, the api will return an error, but also provide the result (so you can write your own custom functions).<br />
 Then, to read the log and know consumption for a month, or along summer/winter etc:
 
 ```php
@@ -211,8 +207,7 @@ $help = $DHC->debugDevice('MyStrangeDevice');
 
 #### v 2.55 (2017-03-30)
 - New: getWeather()
-- Change: faster getInfos()
-
+- Change: faster getInfos()<br />
 *Development should now slow down as we have it all. Keeping an eye on issues and requests of course!*
 
 #### v 2.5 (2017-03-29)
