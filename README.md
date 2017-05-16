@@ -30,6 +30,15 @@ Feel free to submit an issue or pull request to add more.
 Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allowed.<br />
 This API is reverse-engineered, provided for research and development for interoperability.*
 
+[Requirements](#requirements)<br />
+[How-to](#how-to)<br />
+[Connection](#connection)<br />
+[Reading datas](#reading-operations)<br />
+[Changing datas](#changing-operations)<br />
+[Consumption](#consumption)<br />
+[Unsupported device](#unsupported-device)<br />
+[Version history](#version-history)<br />
+
 <img align="right" src="/readmeAssets/requirements.png" width="48">
 
 ## Requirements
@@ -37,6 +46,7 @@ This API is reverse-engineered, provided for research and development for intero
 - cURL (quite standard in PHP servers).
 - The API require internet access (it will authenticate against Devolo servers).
 
+[&#8657;](#php-devolodhc)
 <img align="right" src="/readmeAssets/howto.png" width="48">
 
 ## How-to
@@ -69,9 +79,11 @@ echo "__infos__<br>";
 $infos = $DHC->getInfos();
 echo "<pre>".json_encode($infos['result'], JSON_PRETTY_PRINT)."</pre><br>";
 ```
+[&#8657;](#php-devolodhc)
 <img align="right" src="/readmeAssets/read.png" width="48">
 
-#### READING OPERATIONS (change devices names by yours!):
+#### READING OPERATIONS<br />
+*Change devices names by yours!*
 
 ```php
 //get all devices in a zone:
@@ -128,9 +140,12 @@ $url = $DHC->getDeviceURL('myhttp device');
 //get message data:
 $url = $DHC->getMessageData('MyAlert');
 ```
+
+[&#8657;](#php-devolodhc)
 <img align="right" src="/readmeAssets/set.png" width="48">
 
-#### CHANGING OPERATIONS (change devices names by yours!):
+#### CHANGING OPERATIONS<br />
+*Change devices names by yours!*
 
 ```php
 //TURN DEVICE ON(1) or OFF(0):
@@ -168,6 +183,8 @@ $DHC->turnRuleOnOff('MyRule', 1);
 //TURN TIMER ACTIVE (1 or 0)
 $DHC->turnTimerOnOff('MyTimer', 1);
 ```
+
+[&#8657;](#php-devolodhc)
 <img align="right" src="/readmeAssets/consumption.png" width="48">
 
 #### Consumption
@@ -187,6 +204,7 @@ echo "<pre>".json_encode($stats, JSON_PRETTY_PRINT)."</pre><br>";
 ```
 Of course, it needs a valid previously saved log file by the api. You can provide no dates (full log), or only one (set first as null if needed). Just respect day.month.year (php 'd.m.Y').
 
+[&#8657;](#php-devolodhc)
 #### Unsupported device
 
 If you have unsupported device, you can call special function with this device and post the return in a new issue.
@@ -196,10 +214,10 @@ If you have unsupported device, you can call special function with this device a
 ```php
 $help = $DHC->debugDevice('MyStrangeDevice');
 ```
-
+[&#8657;](#php-devolodhc)
 <img align="right" src="/readmeAssets/changes.png" width="48">
 
-## Changes
+## Version history
 
 #### v 2.6 (2017-04-05)
 - New: getAllZones() / getAllGroups() / getAllRules() / getAllTimers() / getAllScenes() / getAllMessages()
@@ -240,6 +258,7 @@ If there is an error, message is in array['error'] and result is null. So you ca
 - Fix: $DHC->setDeviceValue('MyDevoloSiren', 1) now works (1 is the indice of the tone in the interface list).
 - Fix: Lot more error handling.
 
+[&#8657;](#php-devolodhc)
 <img align="right" src="/readmeAssets/mit.png" width="48">
 
 ## License
