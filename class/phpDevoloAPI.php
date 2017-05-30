@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.63';
+    public $_version = '2.64';
     //user functions======================================================
     public function getInfos() //return infos from this api, Devolo user, and Devolo central
     {
@@ -132,7 +132,6 @@ class DevoloDHC{
                     $value = $answer['result']['items'][0]['properties'][$key];
                     //Seems Devolo doesn't know all about its own motion sensor...
                     if ($key=='sensorType' and $value=='unknown') continue;
-                    //echo 'sensorType:'.$sensorType.', key:'.$key.', value:'.$value.'<br>';
                     $value = $this->formatStates($sensorType, $key, $value);
                     $jsonSensor[$key] = $value;
                 }
@@ -659,6 +658,25 @@ class DevoloDHC{
     }
 
     //internal functions==================================================
+    protected function getSensorType($sensor)
+    {
+        //devolo.BinarySensor:hdm:ZWave:D8F7DDE2/10 -> BinarySensor
+        $sensorType = explode('devolo.', $sensor);
+        if (count($sensorType) == 0) return null;
+        $sensorType = explode(':', $sensorType[1]);
+        $sensorType = $sensorType[0];
+        return $sensorType;
+    }
+
+    protected function getValuesByType($sensorType)
+    {
+        foreach($this->_SensorValuesByType as $type => $param)
+        {
+            if ($type == $sensorType) return $param;
+        }
+        return null;
+    }
+
     public function resetSessionTimeout()
     {
         //cookie expire in 30min, anyway Devolo Central send resetSessionTimeout every 10mins
@@ -697,6 +715,7 @@ class DevoloDHC{
         echo '<pre>settingUIDs:<br>',json_encode($settingsArray, JSON_PRETTY_PRINT),'</pre><br>';
     }
 
+    //getter functions====================================================
     protected function getDevices()
     {
         if (count($this->_AllZones) == 0)
@@ -843,16 +862,23 @@ class DevoloDHC{
         $jsonArray = json_decode($data, true);
 
         //request datas for all rules:
-        $jsonArray = $this->fetchItems($jsonArray['result']['items'][0]['properties']['scheduleUIDs']);
-
-        foreach($jsonArray['result']['items'] as $thisTimer)
+        if (isset($jsonArray['result']))
         {
-            $rule = array('name' => $thisTimer['properties']['itemName'],
-                            'id' => $thisTimer['UID'],
-                            'element' => str_replace('Schedule', 'ScheduleControl', $thisTimer['UID'])
-                            );
-            array_push($this->_AllTimers, $rule);
+            $jsonArray = $this->fetchItems($jsonArray['result']['items'][0]['properties']['scheduleUIDs']);
+            foreach($jsonArray['result']['items'] as $thisTimer)
+            {
+                $rule = array('name' => $thisTimer['properties']['itemName'],
+                                'id' => $thisTimer['UID'],
+                                'element' => str_replace('Schedule', 'ScheduleControl', $thisTimer['UID'])
+                                );
+                array_push($this->_AllTimers, $rule);
+            }
         }
+        else
+        {
+            return array('result'=>nul, 'error'=>'Could not get timers');
+        }
+
     }
 
     protected function getRules()
@@ -961,23 +987,6 @@ class DevoloDHC{
         return $value;
     }
 
-    protected function getSensorType($sensor)
-    {
-        $sensorType = explode('devolo.', $sensor);
-        if (count($sensorType) == 0) return null;
-        $sensorType = explode(':', $sensorType[1]);
-        $sensorType = $sensorType[0];
-        return $sensorType;
-    }
-
-    protected function getValuesByType($sensorType) //ex: devolo.BinarySensor:hdm:ZWave:D8F7DDE2/10
-    {
-        foreach($this->_SensorValuesByType as $type => $param)
-        {
-            if ($type == $sensorType) return $param;
-        }
-        return null;
-    }
 
     //calling functions===================================================
     protected function _request($method, $host, $path, $jsonString=null, $postinfo=null) //standard function handling all get/post request with curl | return string
@@ -1111,28 +1120,40 @@ class DevoloDHC{
     protected $_curlHdl = null;
 
     //types stuff:
-    protected $_SensorsOnOff        = array('BinarySwitch', 'BinarySensor'); //supported sensor types for on/off operation
+    /*
+    Devolo Home Control Portal(web interface or app interface to access HCB Home Control Box)
+        -> HCB
+            ->Device
+                - sensor (type, data), handle operations ?
+                - sensor (type, data), handle operations ?
+            ->Device
+                - sensor (type, data), handle operations ?
+            etc
+    */
+    protected $_SensorsOnOff        = array('BinarySwitch', 'BinarySensor', 'HueBulbSwitch'); //supported sensor types for on/off operation
     protected $_SensorsSend         = array('HttpRequest'); //supported sensor types for send operation
-    protected $_SensorsSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch'); //supported sensor types for sendValue operation
+    protected $_SensorsSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch', 'Blinds'); //supported sensor types for sendValue operation
     protected $_SensorsPressKey     = array('RemoteControl'); //supported sensor types for pressKey operation
 
     protected $_SensorsNoValues     = array('HttpRequest'); //virtual device sensor
 
     protected $_SensorValuesByType  = array(
+                                        'Meter'                 => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
+                                        'BinarySwitch'          => array('switchType', 'state', 'targetState'),
                                         'MildewSensor'          => array('sensorType', 'state'),
                                         'BinarySensor'          => array('sensorType', 'state'),
-                                        'BinarySwitch'          => array('switchType', 'state', 'targetState'),
                                         'SirenBinarySensor'     => array('sensorType', 'state'),
-                                        'Meter'                 => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
                                         'MultiLevelSensor'      => array('sensorType', 'value'),
                                         'HumidityBarZone'       => array('sensorType', 'value'),
                                         'DewpointSensor'        => array('sensorType', 'value'),
                                         'HumidityBarValue'      => array('sensorType', 'value'),
-                                        'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
                                         'SirenMultiLevelSensor' => array('sensorType', 'value'),
-                                        'LastActivity'          => array('lastActivityTime'),
+                                        'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
+                                        'MultiLevelSwitch'      => array('switchType', 'value', 'targetValue', 'min', 'max'),
                                         'RemoteControl'         => array('keyCount', 'keyPressed'),
-                                        'MultiLevelSwitch'      => array('switchType', 'value', 'targetValue', 'min', 'max')
+                                        'Blinds'                => array('switchType', 'value', 'targetValue', 'min', 'max'),
+                                        'LastActivity'          => array('lastActivityTime'),
+                                        'WarningBinaryFI'       => array('sensorType', 'state', 'type')
                                         );
 
     protected function getCSRF($htmlString)
