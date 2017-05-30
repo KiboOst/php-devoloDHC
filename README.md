@@ -22,6 +22,8 @@ The following devices are currently supported:
 - Rules (get/set)
 - Messages (get/set)
 
+- Qubino "Flush Shutter" ZMNHCD1 (get/set)
+
 Changing settings will appear in Devolo web interface / Apps daily diary with your account as usual.
 
 Feel free to submit an issue or pull request to add more.
