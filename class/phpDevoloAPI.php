@@ -4,9 +4,19 @@
 
 class DevoloDHC{
 
-    public $_version = '2.64';
+    public $_version = '2.70';
+
+    /*
+        All functions return an array containing 'result', and 'error' if there is a problem.
+        So we can always check for error, then parse the result:
+            $state = $DHC->isDeviceOn('MyPlug');
+            if (isset($state['error'])) echo $state['error'];
+            else echo "Device state:".$state['result'];
+    */
+
     //user functions======================================================
-    public function getInfos() //return infos from this api, Devolo user, and Devolo central
+
+    public function getInfos() //@return['result'] array infos from this api, Devolo user, and Devolo central
     {
 
         if (!isset($this->_userInfos))
@@ -56,8 +66,9 @@ class DevoloDHC{
         return array('result'=>$infos);
     }
 
-    //IS:
-    public function isRuleActive($rule)
+    //______________________IS:
+
+    public function isRuleActive($rule) //@rule name | @return['result'] string active/inactive
     {
         if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
         if ( isset($rule['error']) ) return $rule;
@@ -69,7 +80,7 @@ class DevoloDHC{
         return array('result'=>$state);
     }
 
-    public function isTimerActive($timer)
+    public function isTimerActive($timer) //@timer name | @return['result'] string active/inactive
     {
         if ( is_string($timer) ) $timer = $this->getTimerByName($timer);
         if ( isset($timer['error']) ) return $timer;
@@ -77,7 +88,7 @@ class DevoloDHC{
         return $this->isRuleActive($timer);
     }
 
-    public function isDeviceOn($device) //return true of false if find a sensor state in device
+    public function isDeviceOn($device) //@device name | @return['result'] string on/off
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -105,8 +116,9 @@ class DevoloDHC{
         return array('result'=>null, 'error' => 'Unfound OnOff sensor for device');
     }
 
-    //GET:
-    public function getDeviceStates($device, $DebugReport=null) //return array of sensor type and state
+    //______________________GET:
+
+    public function getDeviceStates($device, $DebugReport=null) //@return['result'] array of sensor type and state
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -116,7 +128,6 @@ class DevoloDHC{
 
         //fetch sensors:
         $arrayStates = array();
-
         foreach($sensors as $sensor)
         {
             $sensorType = $this->getSensorType($sensor);
@@ -147,7 +158,7 @@ class DevoloDHC{
         return array('result'=>$arrayStates);
     }
 
-    public function getDeviceData($device, $askData=null) //get device sensor data. If not asked data, return available datas
+    public function getDeviceData($device, $askData=null) //@device name | @return['result'] sensor data. If not asked data, @return['available'] all available sensors/data array
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -167,7 +178,7 @@ class DevoloDHC{
         return $error;
     }
 
-    public function getDevicesByZone($zoneName)
+    public function getDevicesByZone($zoneName) //@zone name | @return['result'] array of devices
     {
         foreach($this->_AllZones as $thisZone)
         {
@@ -185,7 +196,7 @@ class DevoloDHC{
         return array('result'=>null, 'error'=>'Unfound '.$zoneName);
     }
 
-    public function getDeviceURL($device)
+    public function getDeviceURL($device) //@device name | @return['result'] string
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -200,7 +211,7 @@ class DevoloDHC{
         return array('result'=>$url);
     }
 
-    public function getDeviceBattery($device)
+    public function getDeviceBattery($device) //@device name | @return['result'] string
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -211,7 +222,7 @@ class DevoloDHC{
         return array('result'=>$batLevel);
     }
 
-    public function getAllBatteries($lowLevel=100, $filter=1)
+    public function getAllBatteries($lowLevel=100, $filter=1) //@return['result'] array of device name / battery level under $lowLevel. $filter other than 1 return even no battery devices.
     {
         $jsonDatas = array();
         $c = count($this->_AllDevices);
@@ -227,7 +238,7 @@ class DevoloDHC{
         return array('result'=>$jsonDatas);
     }
 
-    public function getDailyDiary($numEvents=20)
+    public function getDailyDiary($numEvents=20) //@number of events to return | @return['result'] array of daily events
     {
         if (!is_int($numEvents)) return array('error'=> 'Provide numeric argument as number of events to report');
         if ($numEvents < 0) return array('error'=> 'Dude, what should I report as negative number of events ? Are you in the future ?');
@@ -257,16 +268,16 @@ class DevoloDHC{
         return array('result'=>$jsonDatas);
     }
 
-    public function getDailyStat($device, $dayBefore=0)
+    public function getDailyStat($device, $dayBefore=0) //@device name, @day before 0 1 or 2 | @return['result'] array
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
 
-        if (!is_int($dayBefore)) return array('error'=> 'second argument should be 0 1 or 2 for today, yesterday, day before yesterday');
+        if (!is_int($dayBefore)) return array('error'=> 'Second argument should be 0 1 or 2 for today, yesterday, day before yesterday');
 
         $operation = "retrieveDailyStatistics";
         $statSensor = $device['statUID'];
-        if ($statSensor=='None') return array('result'=>null, 'error'=>"No statistic for such device.");
+        if ($statSensor=='None') return array('result'=>null, 'error'=>"No statistic for such device");
         $answer = $this->invokeOperation($statSensor, $operation, $dayBefore);
         if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
 
@@ -306,7 +317,7 @@ class DevoloDHC{
         return array('result'=>$jsonDatas);
     }
 
-    public function getWeather()
+    public function getWeather() //@return['result'] array of weather data for next three days
     {
         $jsonString = '{
             "jsonrpc":"2.0",
@@ -338,22 +349,21 @@ class DevoloDHC{
         return array('result'=>$this->_Weather);
     }
 
-    public function getMessageData($msg)
+    public function getMessageData($msg) //@message name | @return['result'] array of message data
     {
         if ( is_string($msg) ) $msg = $this->getMessageByName($msg);
         if ( isset($msg['error']) ) return $msg;
 
         $answer = $this->fetchItems(array($msg['element']));
-
         if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
-
         return array('result' => $answer['result']['items'][0]['properties']['msgData']);
     }
 
-    //CONSUMPTION:
-    public function logConsumption($filePath='/')
+    //______________________CONSUMPTION:
+
+    public function logConsumption($filePath='/') //@log file path | always @return['result'] array of yesterday total consumptions, @return['error'] if can't write file
     {
-        if (file_exists($filePath))
+        if (@file_exists($filePath))
         {
             $prevDatas = json_decode(file_get_contents($filePath), true);
         }
@@ -365,9 +375,10 @@ class DevoloDHC{
         //get yesterday sums for each device:
         $yesterday = date('d.m.Y',strtotime('-1 days'));
         $datasArray = array();
+
         foreach ($this->_AllDevices as $device)
         {
-            if (strstr($device['model'], 'Wall:Plug:Switch:and:Meter'))
+            if (in_array($device['model'], $this->_MeteringDevices))
             {
                 $name = $device['name'];
                 $datas = $this->getDailyStat($device, 1);
@@ -391,19 +402,12 @@ class DevoloDHC{
         $prevDatas = $newArray;
 
         //write it to file:
-        $put = file_put_contents($filePath, json_encode($prevDatas, JSON_PRETTY_PRINT));
+        @$put = file_put_contents($filePath, json_encode($prevDatas, JSON_PRETTY_PRINT));
         if ($put) return array('result'=>$datasArray);
         return array('result'=>$datasArray, 'error'=>'Unable to write file!');
     }
 
-    private function sortByDate($a, $b)
-    {
-        $t1 = strtotime($a);
-        $t2 = strtotime($b);
-        return ($t2 - $t1);
-    }
-
-    public function getLogConsumption($filePath, $dateStart=null, $dateEnd=null)
+    public function getLogConsumption($filePath='/', $dateStart=null, $dateEnd=null) //@log file path | @return['result'] array, @return['error'] if can't read file
     {
         if (file_exists($filePath))
         {
@@ -438,12 +442,13 @@ class DevoloDHC{
         }
         else
         {
-            return array('result'=>null, 'error'=>'Unable to open file!');
+            return array('result'=>null, 'error'=>'Unable to open file');
         }
     }
 
-    //SET:
-    public function startScene($scene)
+    //______________________SET:
+
+    public function startScene($scene) //@scene name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($scene) ) $scene = $this->getSceneByName($scene);
         if ( isset($scene['error']) ) return $scene;
@@ -455,7 +460,7 @@ class DevoloDHC{
         return array('result'=>$result);
     }
 
-    public function turnRuleOnOff($rule, $state=0)
+    public function turnRuleOnOff($rule, $state=0) //@rule name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($rule) ) $rule = $this->getRuleByName($rule);
         if ( isset($rule['error']) ) return $rule;
@@ -472,7 +477,7 @@ class DevoloDHC{
         return array('result'=>$answer);
     }
 
-    public function turnTimerOnOff($timer, $state=0)
+    public function turnTimerOnOff($timer, $state=0) //@timer name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($timer) ) $timer = $this->getTimerByName($timer);
         if ( isset($timer['error']) ) return $timer;
@@ -489,7 +494,7 @@ class DevoloDHC{
         return array('result'=>$answer);
     }
 
-    public function turnDeviceOnOff($device, $state=0)
+    public function turnDeviceOnOff($device, $state=0) //@device name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -521,7 +526,7 @@ class DevoloDHC{
         return array('result'=>null, 'error' => 'No supported sensor for this device');
     }
 
-    public function turnGroupOnOff($group, $state=0)
+    public function turnGroupOnOff($group, $state=0) //@group name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($group) ) $group = $this->getGroupByName($group);
         if ( isset($group['error']) ) return $group;
@@ -535,7 +540,7 @@ class DevoloDHC{
         return array('result'=>true);
     }
 
-    public function setDeviceValue($device, $value)
+    public function setDeviceValue($device, $value) //@device name, @value | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -558,10 +563,11 @@ class DevoloDHC{
         return array('result'=>null, 'error' => 'No supported sensor for this device');
     }
 
-    public function pressDeviceKey($device, $key=null)
+    public function pressDeviceKey($device, $key=null) //@device name, @key number | @return['result'] central answer, @return['error'] if any
     {
-        if (!isset($key)) return array('result'=>null, 'error' => 'No key to press');
+        if (!isset($key)) return array('result'=>null, 'error' => 'No defined key to press');
         if ($key > 4) return array('result'=>null, 'error' => 'You really have Wall Switch with more than 4 buttons ? Let me know!');
+
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
 
@@ -582,7 +588,7 @@ class DevoloDHC{
         return array('result'=>null, 'error' => 'No supported sensor for this device');
     }
 
-    public function sendMessage($msg)
+    public function sendMessage($msg) //@message name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($msg) ) $msg = $this->getMessageByName($msg);
         if ( isset($msg['error']) ) return $msg;
@@ -594,7 +600,9 @@ class DevoloDHC{
         return array('result'=>$result);
     }
 
-    //GET shorcuts:
+    //INTERNAL FUNCTIONS==================================================
+
+    //______________________GET shorcuts:
     public function getDeviceByName($name)
     {
         foreach($this->_AllDevices as $thisDevice)
@@ -657,7 +665,8 @@ class DevoloDHC{
         return array('result'=>null, 'error' => 'Unfound Message');
     }
 
-    //internal functions==================================================
+    //______________________internal mixture
+
     protected function getSensorType($sensor)
     {
         //devolo.BinarySensor:hdm:ZWave:D8F7DDE2/10 -> BinarySensor
@@ -675,6 +684,23 @@ class DevoloDHC{
             if ($type == $sensorType) return $param;
         }
         return null;
+    }
+
+    public function debugDevice($device)
+    {
+        if ( is_string($device) ) $device = $this->getDeviceByName($device);
+        if ( isset($device['error']) ) return $device;
+
+        $jsonArray = $this->fetchItems(array($device['uid']));
+        echo '<pre>Device:<br>',json_encode($jsonArray, JSON_PRETTY_PRINT),'</pre><br>';
+
+        $elements = $jsonArray['result']['items'][0]['properties']['elementUIDs'];
+        $elementsArray = $this->fetchItems($elements);
+        echo '<pre>elementUIDs:<br>',json_encode($elementsArray, JSON_PRETTY_PRINT),'</pre><br>';
+
+        $settings = $jsonArray['result']['items'][0]['properties']['settingUIDs'];
+        $settingsArray = $this->fetchItems($settings);
+        echo '<pre>settingUIDs:<br>',json_encode($settingsArray, JSON_PRETTY_PRINT),'</pre><br>';
     }
 
     public function resetSessionTimeout()
@@ -698,25 +724,16 @@ class DevoloDHC{
         return array('result'=>$answer['result']);
     }
 
-    public function debugDevice($device)
+    private function sortByDate($a, $b) //Used for consumption logging sorting
     {
-        if ( is_string($device) ) $device = $this->getDeviceByName($device);
-        if ( isset($device['error']) ) return $device;
-
-        $jsonArray = $this->fetchItems(array($device['uid']));
-        echo '<pre>Device:<br>',json_encode($jsonArray, JSON_PRETTY_PRINT),'</pre><br>';
-
-        $elements = $jsonArray['result']['items'][0]['properties']['elementUIDs'];
-        $elementsArray = $this->fetchItems($elements);
-        echo '<pre>elementUIDs:<br>',json_encode($elementsArray, JSON_PRETTY_PRINT),'</pre><br>';
-
-        $settings = $jsonArray['result']['items'][0]['properties']['settingUIDs'];
-        $settingsArray = $this->fetchItems($settings);
-        echo '<pre>settingUIDs:<br>',json_encode($settingsArray, JSON_PRETTY_PRINT),'</pre><br>';
+        $t1 = strtotime($a);
+        $t2 = strtotime($b);
+        return ($t2 - $t1);
     }
 
-    //getter functions====================================================
-    protected function getDevices()
+    //______________________getter functions
+
+    protected function getDevices() //First call after connection, ask all zones and register all devices into $this->_AllDevices
     {
         if (count($this->_AllZones) == 0)
         {
@@ -752,14 +769,15 @@ class DevoloDHC{
                             'zoneId' => (isset($thisDevice['properties']['zoneId']) ? $thisDevice['properties']['zoneId'] : 'None'),
                             'statUID' => (isset($thisDevice['properties']['statisticsUID']) ? $thisDevice['properties']['statisticsUID'] : 'None'),
                             'batteryLevel' => (isset($thisDevice['properties']['batteryLevel']) ? $thisDevice['properties']['batteryLevel'] : 'None'),
-                            'model' => (isset($thisDevice['properties']['deviceModelUID']) ? $thisDevice['properties']['deviceModelUID'] : 'None')
+                            'model' => (isset($thisDevice['properties']['deviceModelUID']) ? $thisDevice['properties']['deviceModelUID'] : 'None'),
+                            'icon' => (isset($thisDevice['properties']['icon']) ? $thisDevice['properties']['icon'] : 'None')
                             );
             $devices[] = $device;
         }
         $this->_AllDevices = $devices;
     }
 
-    protected function getZones() //also get groups!
+    protected function getZones() //called by getDevices(), register all zones into $this->_AllZones and groups into $this->_AllGroups
     {
         $this->_AllZones = array();
         $this->_AllGroups = array();
@@ -818,7 +836,7 @@ class DevoloDHC{
         }
     }
 
-    protected function getScenes()
+    protected function getScenes() //called if necessary, register all scenes into $this->_AllScenes
     {
         $this->_AllScenes = array();
 
@@ -846,7 +864,7 @@ class DevoloDHC{
         }
     }
 
-    protected function getTimers()
+    protected function getTimers() //called if necessary, register all timers into $this->_AllTimers
     {
         $this->_AllTimers = array();
 
@@ -878,10 +896,9 @@ class DevoloDHC{
         {
             return array('result'=>nul, 'error'=>'Could not get timers');
         }
-
     }
 
-    protected function getRules()
+    protected function getRules() //called if necessary, register all rules into $this->_AllRules
     {
         $this->_AllRules = array();
 
@@ -909,7 +926,7 @@ class DevoloDHC{
         }
     }
 
-    protected function getMessages()
+    protected function getMessages() //called if necessary, register all messages into $this->_AllMessages
     {
         $this->_AllMessages = array();
 
@@ -945,10 +962,11 @@ class DevoloDHC{
         }
     }
 
-    protected function formatStates($sensorType, $key, $value)
+    protected function formatStates($sensorType, $key, $value) //string formating accordingly to type of data. May support units regarding timezone in the future...
     {
         if ($sensorType=='Meter' and $key=='totalValue') return $value.'kWh';
         if ($sensorType=='Meter' and $key=='currentValue') return $value.'W';
+        if ($sensorType=='Meter' and $key=='voltage') return $value.'V';
         if ($key=='sinceTime')
         {
             $ts = $value;
@@ -988,7 +1006,8 @@ class DevoloDHC{
     }
 
 
-    //calling functions===================================================
+    //______________________calling functions
+
     protected function _request($method, $host, $path, $jsonString=null, $postinfo=null) //standard function handling all get/post request with curl | return string
     {
         if (!isset($this->_curlHdl))
@@ -1087,18 +1106,18 @@ class DevoloDHC{
         return $jsonArray;
     }
 
-    //functions authorization=============================================
+    //______________________Internal cooking
 
     //user central stuff:
+    public $error = null;
     public $_userInfos;
     public $_centralInfos;
     public $_gateway;
+    public $_gateIdx = 0;
     public $_uuid = null;
     public $_token;
-    public $error = null;
     public $_wasCookiesLoaded = false;
     public $_cookFile = '';
-    public $_gateIdx = 0;
 
     //central stuff stuff(!):
     public $_AllDevices = null;
@@ -1121,41 +1140,58 @@ class DevoloDHC{
 
     //types stuff:
     /*
-    Devolo Home Control Portal(web interface or app interface to access HCB Home Control Box)
+    Devolo Home Control Portal (web interface or app interface to access HCB Home Control Box)
         -> HCB
             ->Device
                 - sensor (type, data), handle operations ?
                 - sensor (type, data), handle operations ?
-            ->Device
-                - sensor (type, data), handle operations ?
+            ->Zone
+                - deviceUIDs
+            ->Group
+                - deviceUIDs
             etc
     */
-    protected $_SensorsOnOff        = array('BinarySwitch', 'BinarySensor', 'HueBulbSwitch'); //supported sensor types for on/off operation
-    protected $_SensorsSend         = array('HttpRequest'); //supported sensor types for send operation
-    protected $_SensorsSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch', 'Blinds'); //supported sensor types for sendValue operation
-    protected $_SensorsPressKey     = array('RemoteControl'); //supported sensor types for pressKey operation
 
+    /* UNTESTED:
+        devolo.model.Dimmer / Dimmer
+        devolo.model.Relay / Relay
+        HueBulbSwitch / HueBulbSwitch
+        HueBulbColor / HueBulbColor
+    */
+    protected $_MeteringDevices     = array('devolo.model.Wall:Plug:Switch:and:Meter', 'devolo.model.Shutter', 'devolo.model.Dimmer', 'devolo.model.Relay'); //devices for consumption loging !
+    //Sensors Operations:
+    protected $_SensorsOnOff        = array('BinarySwitch', 'BinarySensor', 'HueBulbSwitch', 'Relay'); //supported sensor types for 'turnOn'/'turnOff' operation
+    protected $_SensorsSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch', 'Blinds', 'Dimmer'); //supported sensor types for 'sendValue' operation
+    protected $_SensorsPressKey     = array('RemoteControl'); //supported sensor types for 'pressKey' operation
+    protected $_SensorsSendHSB      = array('HueBulbColor'); //supported sensor types for 'sendHSB' operation
+    protected $_SensorsSend         = array('HttpRequest'); //supported sensor types for 'send' operation
     protected $_SensorsNoValues     = array('HttpRequest'); //virtual device sensor
-
+    //Sensors Values:
     protected $_SensorValuesByType  = array(
-                                        'Meter'                 => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
-                                        'BinarySwitch'          => array('switchType', 'state', 'targetState'),
-                                        'MildewSensor'          => array('sensorType', 'state'),
-                                        'BinarySensor'          => array('sensorType', 'state'),
-                                        'SirenBinarySensor'     => array('sensorType', 'state'),
-                                        'MultiLevelSensor'      => array('sensorType', 'value'),
-                                        'HumidityBarZone'       => array('sensorType', 'value'),
-                                        'DewpointSensor'        => array('sensorType', 'value'),
-                                        'HumidityBarValue'      => array('sensorType', 'value'),
-                                        'SirenMultiLevelSensor' => array('sensorType', 'value'),
-                                        'SirenMultiLevelSwitch' => array('switchType', 'targetValue'),
-                                        'MultiLevelSwitch'      => array('switchType', 'value', 'targetValue', 'min', 'max'),
-                                        'RemoteControl'         => array('keyCount', 'keyPressed'),
-                                        'Blinds'                => array('switchType', 'value', 'targetValue', 'min', 'max'),
-                                        'LastActivity'          => array('lastActivityTime'),
-                                        'WarningBinaryFI'       => array('sensorType', 'state', 'type')
+                                        'Meter'                     => array('sensorType', 'currentValue', 'totalValue', 'sinceTime'),
+                                        'BinarySwitch'              => array('switchType', 'state', 'targetState'),
+                                        'Relay'                     => array('switchType', 'state', 'targetState'),
+                                        'MildewSensor'              => array('sensorType', 'state'),
+                                        'BinarySensor'              => array('sensorType', 'state'),
+                                        'SirenBinarySensor'         => array('sensorType', 'state'),
+                                        'MultiLevelSensor'          => array('sensorType', 'value'),
+                                        'HumidityBarZone'           => array('sensorType', 'value'),
+                                        'DewpointSensor'            => array('sensorType', 'value'),
+                                        'HumidityBarValue'          => array('sensorType', 'value'),
+                                        'SirenMultiLevelSensor'     => array('sensorType', 'value'),
+                                        'SirenMultiLevelSwitch'     => array('switchType', 'value', 'targetValue', 'min', 'max'),
+                                        'MultiLevelSwitch'          => array('switchType', 'value', 'targetValue', 'min', 'max'),
+                                        'RemoteControl'             => array('keyCount', 'keyPressed'),
+                                        'Blinds'                    => array('switchType', 'value', 'targetValue', 'min', 'max'),
+                                        'Dimmer'                    => array('switchType', 'value', 'targetValue', 'min', 'max'),
+                                        'HueBulbSwitch'             => array('sensorType', 'state'),
+                                        'HueBulbColor'              => array('switchType', 'hue', 'sat', 'bri', 'targetHsb'),
+                                        'LastActivity'              => array('lastActivityTime'),
+                                        'WarningBinaryFI'           => array('sensorType', 'state', 'type'),
+                                        'VoltageMultiLevelSensor'   => array('sensorType', 'value' ),
                                         );
 
+    //functions authorization=============================================
     protected function getCSRF($htmlString)
     {
         $dom = new DOMDocument();
@@ -1282,10 +1318,10 @@ class DevoloDHC{
     }
 
     /*
-    dynamic call to getAllxxx / $_DHC->getAllDevices();
-    if _AllDevices is null, call getDevices, return _AllDevices
+        dynamic call to getAllxxx / $_DHC->getAllDevices();
+        if _AllDevices is null, call getDevices, return _AllDevices
 
-    getAllDevices() / getAllZones() / getAllGroups() / getAllRules() / getAllTimers() / getAllScenes() / getAllMessages()
+        getAllDevices() / getAllZones() / getAllGroups() / getAllRules() / getAllTimers() / getAllScenes() / getAllMessages()
     */
     public function __call($name, $args)
     {
