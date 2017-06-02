@@ -21,8 +21,7 @@ The following devices are currently supported:
 - Timers (get/set)
 - Rules (get/set)
 - Messages (get/set)
-
-- Qubino "Flush Shutter" ZMNHCD1 (get/set)
+- Qubino / Devolo "Flush Shutter" ZMNHCD1 (get/set)
 
 Changing settings will appear in Devolo web interface / Apps daily diary with your account as usual.
 
@@ -176,6 +175,9 @@ $_DHC->pressDeviceKey('my thermostat', 1);
 //TURN SIREN ON: (last number is the indice of the tone in the interface list. For example, 1 is alarm and won't stop! 0 will!)
 $DHC->setDeviceValue('My Devolo Siren', 5);
 
+//SET SHUTTER OPENING:
+$DHC->setDeviceValue('qubShutter', 50);
+
 //PRESS REMOTE SWITCH KEY OR KEY FOB KEY:
 $DHC->pressDeviceKey('MySwitch', 3);
 
@@ -184,6 +186,9 @@ $DHC->turnRuleOnOff('MyRule', 1);
 
 //TURN TIMER ACTIVE (1 or 0)
 $DHC->turnTimerOnOff('MyTimer', 1);
+
+//TURN OFF DAILY DIARY REPORT (true/false):
+$DHC->setDeviceDiary('movekitchen', false);
 ```
 
 [&#8657;](#php-devolodhc)
@@ -220,6 +225,11 @@ $help = $DHC->debugDevice('MyStrangeDevice');
 <img align="right" src="/readmeAssets/changes.png" width="48">
 
 ## Version history
+
+#### v 2.72 (2017-06-02)
+- New: support for last Devolo update: setDeviceDiary('devicename', true)
+- New: qubino/devolo shutter flush module support
+*qubino/devolo 1 relay and dimmer should works also*
 
 #### v 2.6 (2017-04-05)
 - New: getAllZones() / getAllGroups() / getAllRules() / getAllTimers() / getAllScenes() / getAllMessages()
