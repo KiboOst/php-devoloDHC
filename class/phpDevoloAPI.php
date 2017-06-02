@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.70';
+    public $_version = '2.72';
 
     /*
         All functions return an array containing 'result', and 'error' if there is a problem.
@@ -598,6 +598,26 @@ class DevoloDHC{
         if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
         $result = ( ($answer['result'] == null) ? true : false );
         return array('result'=>$result);
+    }
+
+    public function setDeviceDiary($device, $state=true) //@device name, @state true/false | @return['result'] central answer, @return['error'] if any
+    {
+        if ( is_string($device) ) $device = $this->getDeviceByName($device);
+        if ( isset($device['error']) ) return $device;
+
+        $deviceName = $device['name'];
+        $deviceIcon = $device['icon'];
+        $zoneID = $device['zoneId'];
+        $deviceSetting = 'gds.'.$device['uid'];
+        $state = var_export($state, true);
+
+        $jsonString = '{"jsonrpc":"2.0",
+                        "method":"FIM/invokeOperation",
+                        "params":["'.$deviceSetting.'","save",[{"name":"'.$deviceName.'","icon":"'.$deviceIcon.'","zoneID":"'.$zoneID.'","eventsEnabled":'.$state.'}]]}';
+
+        $answer = $this->_request('POST', $this->_dhcUrl, '/remote/json-rpc', $jsonString);
+        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+        return $answer;
     }
 
     //INTERNAL FUNCTIONS==================================================
