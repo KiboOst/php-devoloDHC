@@ -7,20 +7,22 @@
 This php API allows you to control your Devolo Home Control devices.
 The following devices are currently supported:
 
-- Smart Metering Plug (get/set)
-- Wall Switch / Key Fob (get/set)
-- Siren (get/set)
+- Devolo Smart Metering Plug (get/set)
+- Devolo Wall Switch / Devolo Key Fob (get/set)
+- Devolo Siren (get/set)
+- Devolo Room Thermostat / Radiator Thermostat(valve) (get/set)
+- Devolo Flood Sensor (get)
+- Devolo Humidity Sensor (get)
+- Devolo Motion Sensor (get)
+- Devolo Door/Window Contact (get)
 - http devices (get/set)
-- Room Thermostat / Radiator Thermostat(valve) (get/set)
-- Flood Sensor (get)
-- Humidity Sensor (get)
-- Motion Sensor (get)
-- Door/Window Contact (get)
+
 - Scenes (get/set)
 - Groups (get/set)
 - Timers (get/set)
 - Rules (get/set)
 - Messages (get/set)
+
 - Qubino / Devolo "Flush Shutter" ZMNHCD1 (get/set)
 - Qubino Flush 2 Relay ZMNHBDx (get/set one or both contacts)
 
