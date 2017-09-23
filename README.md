@@ -22,6 +22,7 @@ The following devices are currently supported:
 - Rules (get/set)
 - Messages (get/set)
 - Qubino / Devolo "Flush Shutter" ZMNHCD1 (get/set)
+- Qubino Flush 2 Relay ZMNHBDx (get/set one or both contacts)
 
 Changing settings will appear in Devolo web interface / Apps daily diary with your account as usual.
 
@@ -226,9 +227,16 @@ $help = $DHC->debugDevice('MyStrangeDevice');
 
 ## Version history
 
+#### v 2.80 (2017-09-23)
+- New: getNumStats() report number of devices, rules, timers, scenes, groups, zones, messages
+- Enhanced: Qubino Flush 2 Relay ZMNHBDx support<br />
+$_DHC->turnDeviceOnOff('my2relay', 1, 'All') //support 1, 2, 'All' for Q1, Q2, both<br />
+$_DHC->isDeviceOn('my2relay', 1) //support 1, 2, 'All' for Q1, Q2, both
+
 #### v 2.72 (2017-06-02)
 - New: support for last Devolo update: setDeviceDiary('devicename', true)
 - New: qubino/devolo shutter flush module support
+
 *qubino/devolo 1 relay and dimmer should works also*
 
 #### v 2.6 (2017-04-05)
