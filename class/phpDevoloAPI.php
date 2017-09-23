@@ -4,7 +4,7 @@
 
 class DevoloDHC{
 
-    public $_version = '2.72';
+    public $_version = '2.80';
 
     /*
         All functions return an array containing 'result', and 'error' if there is a problem.
@@ -66,6 +66,25 @@ class DevoloDHC{
         return array('result'=>$infos);
     }
 
+    public function getNumStats() //@return['result'] array containing number of devices, rules, etc...
+    {
+        if (count($this->_AllRules) == 0) $this->getRules();
+        if (count($this->_AllTimers) == 0) $this->getTimers();
+        if (count($this->_AllScenes) == 0) $this->getScenes();
+        if (count($this->_AllMessages) == 0) $this->getMessages();
+
+        $report = array(
+                        'Devices'   => count($this->_AllDevices),
+                        'Rules'     => count($this->_AllRules),
+                        'Timers'    => count($this->_AllTimers),
+                        'Scenes'    => count($this->_AllScenes),
+                        'Groups'    => count($this->_AllGroups),
+                        'Messages'  => count($this->_AllMessages),
+                        'Zones'     => count($this->_AllZones)
+                        );
+        return array('result'=>$report);
+    }
+
     //______________________IS:
 
     public function isRuleActive($rule) //@rule name | @return['result'] string active/inactive
@@ -88,7 +107,7 @@ class DevoloDHC{
         return $this->isRuleActive($timer);
     }
 
-    public function isDeviceOn($device) //@device name | @return['result'] string on/off
+    public function isDeviceOn($device, $switch=null) //@device name | @return['result'] string on/off
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -102,15 +121,56 @@ class DevoloDHC{
 
             if (in_array($sensorType, $this->_SensorsOnOff))
             {
-                $answer = $this->fetchItems(array($sensor));
-                if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
-                if ( isset($answer['result']['items'][0]['properties']['state']) )
+                //check qubino 2 relay:
+                if ($switch != null)
                 {
-                    $state = $answer['result']['items'][0]['properties']['state'];
-                    $isOn = ($state > 0 ? 'on' : 'off');
-                    return array('result' => $isOn);
+                    $thisSwitch = substr($sensor, -2);
+                    //several switches detected?
+                    if ($thisSwitch != '#1' and $thisSwitch != '#2') return array('result'=>null, 'error' => 'This switch does not seem to have several contacts');
+                    //get the other switch:
+                    if ($thisSwitch == '#1') $otherSensor = str_replace('#1', '#2', $sensor);
+                    if ($thisSwitch == '#2') $otherSensor = str_replace('#2', '#1', $sensor);
+                    //so, which swhit(ches) to fetch:
+                    if ($switch == 'All')
+                    {
+                        $toFetch = array($sensor, $otherSensor);
+                        $answer = $this->fetchItems($toFetch);
+                        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                        $state1 = $answer['result']['items'][0]['properties']['state'];
+                        $state2 = $answer['result']['items'][1]['properties']['state'];
+                        $isOn1 = ($state1 > 0 ? 'on' : 'off');
+                        $isOn2 = ($state2 > 0 ? 'on' : 'off');
+                        return array('result' => array($isOn1, $isOn2));
+                    }
+                    if (($switch == 1 and $thisSwitch == '#1') or ($switch == 2 and $thisSwitch == '#2'))
+                    {
+                        $toFetch = array($sensor);
+                    }
+                    else
+                    {
+                        $toFetch = array($otherSensor);
+                    }
+
+                    $answer = $this->fetchItems($toFetch);
+                    if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                    if (isset($answer['result']['items'][0]['properties']['state']))
+                    {
+                        $state = $answer['result']['items'][0]['properties']['state'];
+                        $isOn = ($state > 0 ? 'on' : 'off');
+                        return array('result' => $isOn);
+                    }
                 }
-                $param = $this->getValuesByType($sensorType);
+                else //single sensor request:
+                {
+                    $answer = $this->fetchItems(array($sensor));
+                    if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                    if (isset($answer['result']['items'][0]['properties']['state']))
+                    {
+                        $state = $answer['result']['items'][0]['properties']['state'];
+                        $isOn = ($state > 0 ? 'on' : 'off');
+                        return array('result' => $isOn);
+                    }
+                }
             }
         }
         return array('result'=>null, 'error' => 'Unfound OnOff sensor for device');
@@ -494,7 +554,7 @@ class DevoloDHC{
         return array('result'=>$answer);
     }
 
-    public function turnDeviceOnOff($device, $state=0) //@device name | @return['result'] central answer, @return['error'] if any
+    public function turnDeviceOnOff($device, $state=0, $switch=null) //@device name | @return['result'] central answer, @return['error'] if any
     {
         if ( is_string($device) ) $device = $this->getDeviceByName($device);
         if ( isset($device['error']) ) return $device;
@@ -503,6 +563,7 @@ class DevoloDHC{
         if ($sensors == null) return array('result'=>null, 'error' => 'No sensor found in this device');
 
         if ($state < 0) $state = 0;
+        if ($state > 1) $state = 1;
 
         foreach ($sensors as $sensor)
         {
@@ -511,9 +572,44 @@ class DevoloDHC{
             if (in_array($sensorType, $this->_SensorsOnOff))
             {
                 $operation = ($state == 0 ? 'turnOff' : 'turnOn');
-                $answer = $this->invokeOperation($sensor, $operation);
-                if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
-                return array('result'=>true);
+
+                //check qubino 2 relay:
+                if ($switch != null)
+                {
+                    $thisSwitch = substr($sensor, -2);
+                    //several switches detected?
+                    if ($thisSwitch != '#1' and $thisSwitch != '#2') return array('result'=>null, 'error' => 'This switch does not seem to have several contacts');
+                    //get the other switch:
+                    if ($thisSwitch == '#1') $otherSensor = str_replace('#1', '#2', $sensor);
+                    if ($thisSwitch == '#2') $otherSensor = str_replace('#2', '#1', $sensor);
+                    //so, which swhit(ches) to activate:
+                    if ($switch == 'All')
+                    {
+                        $answer = $this->invokeOperation($sensor, $operation);
+                        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                        $answer = $this->invokeOperation($otherSensor, $operation);
+                        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                        return array('result'=>true);
+                    }
+                    if ($switch == 1 and $thisSwitch == '#1')
+                    {
+                        $answer = $this->invokeOperation($sensor, $operation);
+                        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                        return array('result'=>true);
+                    }
+                    if ($switch == 2 and $thisSwitch == '#2')
+                    {
+                        $answer = $this->invokeOperation($sensor, $operation);
+                        if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                        return array('result'=>true);
+                    }
+                }
+                else //single sensor request:
+                {
+                    $answer = $this->invokeOperation($sensor, $operation);
+                    if (isset($answer['error']['message']) ) return array('result'=>null, 'error'=>$answer['error']['message']);
+                    return array('result'=>true);
+                }
             }
             if (in_array($sensorType, $this->_SensorsSend) and ($state == 1))
             {
@@ -1208,7 +1304,7 @@ class DevoloDHC{
                                         'HueBulbColor'              => array('switchType', 'hue', 'sat', 'bri', 'targetHsb'),
                                         'LastActivity'              => array('lastActivityTime'),
                                         'WarningBinaryFI'           => array('sensorType', 'state', 'type'),
-                                        'VoltageMultiLevelSensor'   => array('sensorType', 'value' ),
+                                        'VoltageMultiLevelSensor'   => array('sensorType', 'value' )
                                         );
 
     //functions authorization=============================================
@@ -1240,7 +1336,7 @@ class DevoloDHC{
         {
             $this->_cookFile = __DIR__.'/dhc_cookies.txt';
 
-            if ( is_writable($this->_cookFile) and (time()-filemtime($this->_cookFile) < 1200) ) //cookie file exist and is younger than 20mins
+            if ( is_writable($this->_cookFile) and (time()-filemtime($this->_cookFile) < 1500) ) //cookie file exist and is younger than 25mins
             {
                 //return true; //no check is 0.15s faster!
                 $var = file_get_contents($this->_cookFile);
