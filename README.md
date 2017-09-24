@@ -15,21 +15,17 @@ The following devices are currently supported:
 - Devolo Humidity Sensor (get)
 - Devolo Motion Sensor (get)
 - Devolo Door/Window Contact (get)
-- http devices (get/set)
-
+- http devices (get/set)<br /><br /> 
 - Scenes (get/set)
 - Groups (get/set)
 - Timers (get/set)
 - Rules (get/set)
-- Messages (get/set)
-
+- Messages (get/set)<br /><br /> 
 - Qubino "Flush Shutter" ZMNHCD1 (get/set)
 - Qubino "Flush 1D Relay" ZMNHND1 (get/set)
 - Qubino "Flush 2 Relay" ZMNHBD1 (get/set one or both contacts)
-- Qubino "Flush Dimmer" ZMNHDD1 (get/set/dim)
-
+- Qubino "Flush Dimmer" ZMNHDD1 (get/set/dim)<br /><br /> 
 - Busch-Jaeger Duro 2000 - ZME_05461 (get/set) 
-
 
 
 Changing settings will appear in Devolo web interface / Apps daily diary with your account as usual.
@@ -45,7 +41,7 @@ This API is reverse-engineered, provided for research and development for intero
 [Connection](#connection)<br />
 [Reading datas](#reading-operations)<br />
 [Changing datas](#changing-operations)<br />
-[Consumption](#consumption)<br /> 
+[Consumption](#consumption)<br />
 [Unsupported device](#unsupported-device)<br />
 [Version history](#version-history)<br />
 
@@ -112,13 +108,13 @@ echo "Device state:".$state['result']."<br>";
 
 //Check for devices with 2 relays (eg. Qubino Flush 2 Relay ZMNHBD1) is on (0=off, 1=on)
 //contact 1
-$state = $DHC->isDeviceOn("My Wall Plug", 1);
+$state = $DHC->isDeviceOn("myRelay", 1);
 echo "Device state:".$state['result']."<br>";
 //contact 2
-$state = $DHC->isDeviceOn("My Wall Plug", 2);
+$state = $DHC->isDeviceOn("myRelay", 2);
 echo "Device state:".$state['result']."<br>";
 //all contacts
-$state = $DHC->isDeviceOn("My Wall Plug", all);
+$state = $DHC->isDeviceOn("myRelay", all);
 echo "Device state:".$state['result']."<br>";
 
 //check a device battery level:
@@ -173,13 +169,13 @@ $url = $DHC->getMessageData('MyAlert');
 //supported: all on/off devices and http devices
 $DHC->turnDeviceOnOff("My Room wallPlug", 1);
 
-//for devices with 2 relays as Qubino Flush 2 Relay ZMNHBD1
-//contact 1
-$DHC->turnDeviceOnOff("My Room wallPlug", 1, 1);
-//contact 2
-$DHC->turnDeviceOnOff("My Room wallPlug", 1, 2);
-//all contacts
-$DHC->turnDeviceOnOff("My Room wallPlug", 1, "All");
+//for devices with 2 relays as Qubino Flush 2 Relay ZMNHBD1 (device name, state, contact):
+//contact 1 on
+$DHC->turnDeviceOnOff("myRelay", 1, 1);
+//contact 2 on
+$DHC->turnDeviceOnOff("myRelay", 1, 2);
+//all contacts on
+$DHC->turnDeviceOnOff("myRelay", 1, "All");
 
 //TURN GROUP ON(1) or OFF(0):
 $DHC->turnGroupOnOff("My Plugs Group", 1);
