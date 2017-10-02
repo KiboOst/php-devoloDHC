@@ -64,7 +64,7 @@ This API is reverse-engineered, provided for research and development for intero
 #### Connection
 
 ```php
-require($_SERVER['DOCUMENT_ROOT']."/path/to/phpDevoloAPI.php");
+require($_SERVER['DOCUMENT_ROOT'].'/path/to/phpDevoloAPI.php');
 $DHC = new DevoloDHC($login, $password);
 if (isset($DHC->error)) echo $DHC->error;
 ```
@@ -97,24 +97,24 @@ $zone = $DHC->getDevicesByZone('living room');
 echo "<pre>zone:<br>".json_encode($zone, JSON_PRETTY_PRINT)."</pre><br>";
 
 //get rule or timer state:
-$state = $DHC->isRuleActive("MyRule");
+$state = $DHC->isRuleActive('MyRule');
 echo "Rule state:".$state['result']."<br>";
-$state = $DHC->isTimerActive("MyTimer");
+$state = $DHC->isTimerActive('MyTimer');
 echo "Timer state:".$state['result']."<br>";
 
 //Check if a device is on (0=off, 1=on)
-$state = $DHC->isDeviceOn("My Wall Plug");
+$state = $DHC->isDeviceOn('My Wall Plug');
 echo "Device state:".$state['result']."<br>";
 
 //Check for devices with 2 relays (eg. Qubino Flush 2 Relay ZMNHBD1) is on (0=off, 1=on)
 //contact 1
-$state = $DHC->isDeviceOn("myRelay", 1);
+$state = $DHC->isDeviceOn('myRelay', 1);
 echo "Device state:".$state['result']."<br>";
 //contact 2
-$state = $DHC->isDeviceOn("myRelay", 2);
+$state = $DHC->isDeviceOn('myRelay', 2);
 echo "Device state:".$state['result']."<br>";
 //all contacts
-$state = $DHC->isDeviceOn("myRelay", all);
+$state = $DHC->isDeviceOn('myRelay', 'all');
 echo "Device state:".$state['result']."<br>";
 
 //check a device battery level:
@@ -171,23 +171,23 @@ $DHC->turnDeviceOnOff("My Room wallPlug", 1);
 
 //for devices with 2 relays as Qubino Flush 2 Relay ZMNHBD1 (device name, state, contact):
 //contact 1 on
-$DHC->turnDeviceOnOff("myRelay", 1, 1);
+$DHC->turnDeviceOnOff('myRelay', 1, 1);
 //contact 2 on
-$DHC->turnDeviceOnOff("myRelay", 1, 2);
+$DHC->turnDeviceOnOff('myRelay', 1, 2);
 //all contacts on
-$DHC->turnDeviceOnOff("myRelay", 1, "All");
+$DHC->turnDeviceOnOff('myRelay', 1, 'All');
 
 //TURN GROUP ON(1) or OFF(0):
-$DHC->turnGroupOnOff("My Plugs Group", 1);
+$DHC->turnGroupOnOff('My Plugs Group', 1);
 
 //RUN HTTP DEVICE:
-$DHC->turnDeviceOnOff("My http device", 1); //, 0 won't do anything of course.
+$DHC->turnDeviceOnOff('My http device', 1); //, 0 won't do anything of course.
 
 //START SCENE:
-$DHC->startScene("We go out");
+$DHC->startScene('We go out');
 
 //SEND MESSAGE:
-$DHC->sendMessage("Alert");
+$DHC->sendMessage('Alert');
 
 //CHANGE THERMOSTAT/VALVE VALUE:
 $targetValue = $DHC->setDeviceValue('My radiator', 21);
