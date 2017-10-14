@@ -19,7 +19,7 @@ class localDevoloDHC extends DevoloDHC{
 	protected $_password;
 	protected $_sessionID; //the one to get first!
 
-	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null, $connect=true)
+	function __construct($login, $password, $localHost, $uuid=null, $gateway=null, $passkey=null, $connect=true, $gateIdx=0)
 	{
 		$this->_login = $login;
 		$this->_password = $password;
@@ -29,7 +29,7 @@ class localDevoloDHC extends DevoloDHC{
 		if (isset($gateway)) $this->_gateway = $gateway;
 		if (isset($passkey)) $this->_passkey = $passkey;
 
-		parent::__construct($login, $password, $connect); //construct main devoloAPI
+		parent::__construct($login, $password, $connect, $gateIdx); //construct main devoloAPI
 
 		if ( isset($this->error) or ($connect==false) )
 		{
@@ -73,15 +73,11 @@ class localDevoloDHC extends DevoloDHC{
 			curl_setopt($this->_curlHdl, CURLOPT_COOKIEFILE, '');
 
 			curl_setopt($this->_curlHdl, CURLOPT_REFERER, 'http://www.google.com/');
-			curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:51.0) Gecko/20100101 Firefox/51.0');
+			curl_setopt($this->_curlHdl, CURLOPT_USERAGENT, 'Mozilla/5.0+(Windows;+WOW64;+x64;+rv:52.0)+Gecko/20100101+Firefox/52.0');
 
 			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYPEER, false);
 			curl_setopt($this->_curlHdl, CURLOPT_SSL_VERIFYHOST, false);
-			curl_setopt($this->_curlHdl, CURLOPT_HTTPHEADER, array(
-														'Connection: keep-alive',
-														'Content-Type: application/json'
-														)
-													);
+			curl_setopt($this->_curlHdl, CURLOPT_HTTPHEADER, array('Content-Type: application/xml'));
 			curl_setopt($this->_curlHdl,CURLOPT_ENCODING , '');
 		}
 		$url = $protocol."://".$host.$path;
@@ -95,7 +91,7 @@ class localDevoloDHC extends DevoloDHC{
 
 		if ( isset($login) and isset($password) )
 		{
-			$auth = $login.":".$password;
+			$auth = urldecode($login).":".urldecode($password);
 			curl_setopt($this->_curlHdl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 			curl_setopt($this->_curlHdl, CURLOPT_USERPWD, $auth);
 		}
@@ -108,7 +104,7 @@ class localDevoloDHC extends DevoloDHC{
 				curl_setopt($this->_curlHdl, CURLOPT_POSTFIELDS, $jsonString);
 			}
 
-		$response = curl_exec($this->_curlHdl);
+        $response = curl_exec($this->_curlHdl);
 
 		//$info   = curl_getinfo($this->_curlHdl);
 		//echo "<pre>cURL info".json_encode($info, JSON_PRETTY_PRINT)."</pre><br>";
