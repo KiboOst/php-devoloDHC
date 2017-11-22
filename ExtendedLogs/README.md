@@ -14,6 +14,8 @@ Here is a how-to to get your devices consumptions and battery levels visual feed
 - showLog.html
 - Display is supported thanks to [jQuery](https://jquery.com/) and [plotly](https://plot.ly/), both linked on their CDN (nothing to install/download)
 
+DHCbatteries.json and DHCconsumptions.json are examples provided to test your setup. Of course you will need your own logs :wink:
+
 
 ## Get logs
 
