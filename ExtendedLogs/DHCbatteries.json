@@ -1,0 +1,38 @@
+{
+    "22.11.2017": {
+        "WallSwitch_1": 62,
+        "WallSwitch_2": 48,
+        "MoveSensor": 98,
+        "OpeningSensor": 96
+    },
+    "21.11.2017": {
+        "WallSwitch_1": 62,
+        "WallSwitch_2": 48,
+        "MoveSensor": 98,
+        "OpeningSensor": 100
+    },
+    "20.11.2017": {
+        "WallSwitch_1": 62,
+        "WallSwitch_2": 48,
+        "MoveSensor": 98,
+        "OpeningSensor": 100
+    },
+    "19.11.2017": {
+        "WallSwitch_1": 68,
+        "WallSwitch_2": 48,
+        "MoveSensor": 98,
+        "OpeningSensor": 100
+    },
+    "18.11.2017": {
+        "WallSwitch_1": 68,
+        "WallSwitch_2": 48,
+        "MoveSensor": 100,
+        "OpeningSensor": 100
+    },
+    "17.11.2017": {
+        "WallSwitch_1": 68,
+        "WallSwitch_2": 48,
+        "MoveSensor": 100,
+        "OpeningSensor": 100
+    }
+}
