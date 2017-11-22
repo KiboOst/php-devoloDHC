@@ -239,6 +239,10 @@ echo "<pre>".json_encode($stats, JSON_PRETTY_PRINT)."</pre><br>";
 ```
 Of course, it needs a valid previously saved log file by the api. You can provide no dates (full log), or only one (set first as null if needed). Just respect day.month.year (php 'd.m.Y').
 
+For visual logs feedback, have a look [here](ExtendedLogs)
+
+<p align="center"><img width="350" src="ExtendedLogs/DHClogs.jpg"></p>
+
 [&#8657;](#php-devolodhc)
 #### Unsupported device
 
