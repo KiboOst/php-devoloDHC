@@ -4,7 +4,9 @@
 
 Here is a how-to to get your devices consumptions and battery levels visual feedback.
 
-<img align="center" src="DHClogs.jpg" width="250">
+<p align="center">
+  <img src="DHClogs.jpg">
+</p>
 
 ## Requirements
 - [Php Devolo API ready to run](https://github.com/KiboOst/php-devoloDHC)
