@@ -1,10 +1,14 @@
 <?php
 
+/*
+
 //https://github.com/KiboOst/php-devoloDHC
+
+*/
 
 class DevoloDHC{
 
-    public $_version = '2.80';
+    public $_version = '2.81';
 
     /*
         All functions return an array containing 'result', and 'error' if there is a problem.
@@ -360,10 +364,8 @@ class DevoloDHC{
                 if (strstr($sensor, '#MultilevelSensor(1)')) $sensor = 'temperature';
                 if (strstr($sensor, '#MultilevelSensor(3)')) $sensor = 'light';
             }
-            if (strstr($device['model'], 'Wall:Plug:Switch:and:Meter'))
-            {
-                if (strstr($sensor, 'Meter:hdm')) $sensor = 'consumption';
-            }
+
+            if (strstr($sensor, 'Meter:hdm')) $sensor = 'consumption';
 
             $sensorData = array('sensor'=>$sensor);
             $countValues = count($values)-1;
@@ -438,13 +440,17 @@ class DevoloDHC{
 
         foreach ($this->_AllDevices as $device)
         {
-            if (in_array($device['model'], $this->_MeteringDevices))
+            $sensors = json_decode($device['sensors'], true);
+            foreach ($sensors as $sensor)
             {
-                $name = $device['name'];
-                $datas = $this->getDailyStat($device, 1);
-                $sum = array_sum($datas['result'][0])/1000;
-                $sum = $sum.'kWh';
-                $datasArray[$yesterday][$name] = $sum;
+                if (strstr($sensor, 'Meter:hdm'))
+                {
+                    $name = $device['name'];
+                    $datas = $this->getDailyStat($device, 1);
+                    $sum = array_sum($datas['result'][0])/1000;
+                    $sum = $sum.'kWh';
+                    $datasArray[$yesterday][$name] = $sum;
+                }
             }
         }
 
@@ -1274,7 +1280,6 @@ class DevoloDHC{
         HueBulbSwitch / HueBulbSwitch
         HueBulbColor / HueBulbColor
     */
-    protected $_MeteringDevices     = array('devolo.model.Wall:Plug:Switch:and:Meter', 'devolo.model.Shutter', 'devolo.model.Dimmer', 'devolo.model.Relay'); //devices for consumption loging !
     //Sensors Operations:
     protected $_SensorsOnOff        = array('BinarySwitch', 'BinarySensor', 'HueBulbSwitch', 'Relay'); //supported sensor types for 'turnOn'/'turnOff' operation
     protected $_SensorsSendValue    = array('MultiLevelSwitch', 'SirenMultiLevelSwitch', 'Blinds', 'Dimmer'); //supported sensor types for 'sendValue' operation
