@@ -37,6 +37,16 @@ Need a python version of this API ? [python-devoloDHC](https://github.com/KiboOs
 Anyway this API use exact same commands as your Devolo Home Control, which is based on ProSyst mBS SDK. When you ask bad stuff to the central, this one doesn't burn but just answer this isn't possible or allowed.<br />
 This API is reverse-engineered, provided for research and development for interoperability.*
 
+---
+:exclamation: **WARNING** :exclamation:
+
+I'm sorry to say that I have switch to Jeedom and do not use anymore Devolo Home Control solution.
+This API has work flawlessly since it's creation here, but in case of coming problems I won't be able to fix or extend it anymore.
+
+If someone want to continue further development of this API, contact me.
+
+---
+
 [Requirements](#requirements)<br />
 [How-to](#how-to)<br />
 [Connection](#connection)<br />
